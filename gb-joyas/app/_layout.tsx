@@ -1,0 +1,51 @@
+import { useEffect, useState } from 'react';
+import { Stack, useRouter, useSegments } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
+import { supabase } from '../lib/supabase';
+import { useAuthStore } from '../stores/authStore';
+
+export default function RootLayout() {
+  const { session, setSession } = useAuthStore();
+  const router = useRouter();
+  const segments = useSegments();
+  const [initialized, setInitialized] = useState(false);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setInitialized(true);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (_event, session) => setSession(session)
+    );
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    if (!initialized) return;
+
+    const inAuthGroup = segments[0] === '(auth)';
+    if (!session && !inAuthGroup) {
+      router.replace('/(auth)/login' as any);
+    } else if (session && inAuthGroup) {
+      router.replace('/(tabs)');
+    }
+  }, [session, segments, initialized]);
+
+  return (
+    <>
+      <StatusBar style="dark" backgroundColor="#FDF7F5" />
+      <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="(tabs)" />
+        <Stack.Screen name="(auth)" />
+        <Stack.Screen name="product/[id]" options={{ presentation: 'modal' }} />
+        <Stack.Screen name="product/new" options={{ presentation: 'modal' }} />
+        <Stack.Screen name="sale/new" options={{ presentation: 'modal' }} />
+        <Stack.Screen name="expense/new" options={{ presentation: 'modal' }} />
+        <Stack.Screen name="settings" options={{ presentation: 'modal' }} />
+      </Stack>
+    </>
+  );
+}

@@ -1,0 +1,241 @@
+// app/tabs/inventory.tsx
+import React, { useState, useCallback } from 'react';
+import {
+  View, Text, ScrollView, TouchableOpacity,
+  TextInput, StyleSheet, SafeAreaView, useWindowDimensions,
+} from 'react-native';
+import { useRouter, useFocusEffect, useLocalSearchParams } from 'expo-router';
+import { COLORS, SIZES } from '../../constants/colors';
+import { PageHeader } from '../../components/ui/Header';
+import { ProductCard } from '../../components/inventory/ProductCard';
+import { getCategorias, getProductos } from '../../lib/queries/products';
+import { Producto, Categoria } from '../../types';
+
+const COLORES = [
+  { key: 'todos', label: 'All' },
+  { key: 'dorado', label: 'Gold', dot: '#D4AF37' },
+  { key: 'plateado', label: 'Silver', dot: '#C0C0C0' },
+  { key: 'rose_gold', label: 'Rose Gold', dot: '#ECABA0' },
+];
+
+export default function InventoryScreen() {
+  const router = useRouter();
+  const { filter } = useLocalSearchParams<{ filter?: string }>();
+  const { width } = useWindowDimensions();
+
+  const [productos, setProductos] = useState<Producto[]>([]);
+  const [categorias, setCategorias] = useState<Categoria[]>([]);
+  const [busqueda, setBusqueda] = useState('');
+  const [catActiva, setCatActiva] = useState('todos');
+  const [colorActivo, setColorActivo] = useState('todos');
+  const [tipoArete, setTipoArete] = useState('todos');
+  const [stockBajoFilter, setStockBajoFilter] = useState(filter === 'stock_bajo');
+  const [loading, setLoading] = useState(true);
+
+  // Responsive columns
+  const numColumns = width > 900 ? 4 : width > 600 ? 3 : 2;
+  const cardWidth = (width - SIZES.lg * 2 - 10 * (numColumns - 1)) / numColumns;
+  const maxCardWidth = 280;
+  const finalCardWidth = Math.min(cardWidth, maxCardWidth);
+
+  const cargar = useCallback(async () => {
+    try {
+      const [p, c] = await Promise.all([getProductos(), getCategorias()]);
+      setProductos(p);
+      setCategorias(c);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useFocusEffect(cargar);
+
+  // Apply stock_bajo filter from params
+  React.useEffect(() => {
+    if (filter === 'stock_bajo') setStockBajoFilter(true);
+  }, [filter]);
+
+  const categoriaActiva = categorias.find(c => c.id === catActiva);
+  const esAretes = categoriaActiva?.nombre === 'Aretes';
+
+  const productosFiltrados = productos.filter(p => {
+    if (stockBajoFilter && p.cantidad >= 3) return false;
+    if (busqueda && !p.nombre.toLowerCase().includes(busqueda.toLowerCase())) return false;
+    if (catActiva !== 'todos' && p.categoria_id !== catActiva) return false;
+    if (colorActivo !== 'todos' && p.color !== colorActivo) return false;
+    return true;
+  });
+
+  return (
+    <SafeAreaView style={styles.safe}>
+      <PageHeader
+        title="Inventario"
+        rightElement={<TouchableOpacity style={styles.btnAgregar} onPress={() => router.push('/product/new')} activeOpacity={0.85}><Text style={styles.btnAgregarText}>+ Agregar</Text></TouchableOpacity>}
+      />
+
+      <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
+        {/* Stock bajo alert banner */}
+        {stockBajoFilter && (
+          <TouchableOpacity
+            style={styles.alertBanner}
+            onPress={() => setStockBajoFilter(false)}
+          >
+            <Text style={styles.alertText}>⚠️ Mostrando productos con stock bajo — toca para limpiar</Text>
+          </TouchableOpacity>
+        )}
+
+        {/* Search */}
+        <View style={styles.searchBar}>
+          <Text style={styles.searchIcon}>🔍</Text>
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Buscar joyería..."
+            placeholderTextColor={COLORS.textLight}
+            value={busqueda}
+            onChangeText={setBusqueda}
+          />
+          {busqueda.length > 0 && (
+            <TouchableOpacity onPress={() => setBusqueda('')}>
+              <Text style={{ color: COLORS.textMuted, fontSize: 16 }}>✕</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+
+        {/* Category filters */}
+        <ScrollView
+          horizontal showsHorizontalScrollIndicator={false}
+          style={styles.chipsScroll} contentContainerStyle={styles.chipsContent}
+        >
+          <TouchableOpacity
+            style={[styles.chip, catActiva === 'todos' && styles.chipActive]}
+            onPress={() => setCatActiva('todos')}
+          >
+            <Text style={[styles.chipText, catActiva === 'todos' && styles.chipTextActive]}>All</Text>
+          </TouchableOpacity>
+          {categorias.map(cat => (
+            <TouchableOpacity
+              key={cat.id}
+              style={[styles.chip, catActiva === cat.id && styles.chipActive]}
+              onPress={() => { setCatActiva(cat.id); setTipoArete('todos'); }}
+            >
+              <Text style={[styles.chipText, catActiva === cat.id && styles.chipTextActive]}>
+                {cat.nombre}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+
+        {/* Earring subfilter */}
+        {esAretes && (
+          <View style={styles.subfilterRow}>
+            <Text style={styles.subfilterLabel}>TIPO:</Text>
+            {['todos', 'regular', 'ear_cuff'].map(tipo => (
+              <TouchableOpacity
+                key={tipo}
+                style={[styles.subchip, tipoArete === tipo && styles.subchipActive]}
+                onPress={() => setTipoArete(tipo)}
+              >
+                <Text style={styles.subchipText}>
+                  {tipo === 'todos' ? 'All' : tipo === 'regular' ? 'Regular' : 'Ear Cuff'}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
+
+        {/* Color filter */}
+        <View style={[styles.subfilterRow, { marginBottom: 14 }]}>
+          <Text style={styles.subfilterLabel}>COLOR:</Text>
+          {COLORES.map(c => (
+            <TouchableOpacity
+              key={c.key}
+              style={[styles.subchip, colorActivo === c.key && styles.subchipActive]}
+              onPress={() => setColorActivo(c.key)}
+            >
+              {c.dot && <View style={[styles.colorDot, { backgroundColor: c.dot }]} />}
+              <Text style={styles.subchipText}>{c.label}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        {/* Results count */}
+        <Text style={styles.resultsCount}>
+          {productosFiltrados.length} producto{productosFiltrados.length !== 1 ? 's' : ''}
+        </Text>
+
+        {/* Product grid — responsive */}
+        <View style={styles.grid}>
+          {productosFiltrados.map(p => (
+            <View key={p.id} style={{ width: finalCardWidth }}>
+              <ProductCard producto={p} />
+            </View>
+          ))}
+        </View>
+
+        {productosFiltrados.length === 0 && !loading && (
+          <View style={styles.empty}>
+            <Text style={styles.emptyText}>
+              {stockBajoFilter ? '✓ No low stock productos' : 'Sin productos con estos filtros'}
+            </Text>
+          </View>
+        )}
+      </ScrollView>
+    </SafeAreaView>
+  );
+}
+
+const styles = StyleSheet.create({
+  safe: { flex: 1, backgroundColor: COLORS.surface },
+  btnAgregar: {
+    backgroundColor: COLORS.wine, borderRadius: SIZES.radiusSm,
+    paddingVertical: 8, paddingHorizontal: 13,
+  },
+  btnAgregarText: { fontSize: 12, fontWeight: '600', color: COLORS.surface },
+
+  scroll: { flex: 1, backgroundColor: COLORS.background },
+  content: { padding: SIZES.lg },
+
+  alertBanner: {
+    backgroundColor: COLORS.rose, borderRadius: SIZES.radiusMd,
+    padding: 10, marginBottom: 12, borderWidth: 1, borderColor: COLORS.wine,
+  },
+  alertText: { fontSize: 12, color: COLORS.wine, fontWeight: '500', textAlign: 'center' },
+
+  searchBar: {
+    backgroundColor: COLORS.surfaceAlt, borderRadius: SIZES.radiusMd,
+    borderWidth: 1, borderColor: COLORS.border,
+    padding: 10, flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12,
+  },
+  searchIcon: { fontSize: 14 },
+  searchInput: { flex: 1, fontSize: 13, color: COLORS.textPrimary, padding: 0 },
+
+  chipsScroll: { marginBottom: 8 },
+  chipsContent: { gap: 8, paddingRight: 4 },
+  chip: {
+    paddingHorizontal: 14, paddingVertical: 6,
+    borderRadius: SIZES.radiusFull, borderWidth: 1, borderColor: COLORS.border,
+    backgroundColor: COLORS.surfaceAlt,
+  },
+  chipActive: { backgroundColor: COLORS.wine, borderColor: COLORS.wine },
+  chipText: { fontSize: 12, fontWeight: '500', color: COLORS.textPrimary },
+  chipTextActive: { color: COLORS.surface },
+
+  subfilterRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8, flexWrap: 'wrap' },
+  subfilterLabel: { fontSize: 10, fontWeight: '600', color: COLORS.textMuted, letterSpacing: 0.5 },
+  subchip: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    paddingHorizontal: 11, paddingVertical: 4,
+    borderRadius: SIZES.radiusFull, borderWidth: 1, borderColor: COLORS.border,
+    backgroundColor: COLORS.surfaceAlt,
+  },
+  subchipActive: { backgroundColor: COLORS.blush, borderColor: COLORS.peach },
+  subchipText: { fontSize: 11, fontWeight: '500', color: COLORS.textPrimary },
+  colorDot: { width: 9, height: 9, borderRadius: 999, borderWidth: 1, borderColor: 'rgba(0,0,0,0.1)' },
+
+  resultsCount: { fontSize: 11, color: COLORS.textMuted, marginBottom: 10 },
+
+  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+
+  empty: { padding: 24, alignItems: 'center' },
+  emptyText: { color: COLORS.textMuted, fontSize: 13 },
+});
