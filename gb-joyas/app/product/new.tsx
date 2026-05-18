@@ -108,42 +108,68 @@ export default function NewProductScreen() {
       <Header showBack backLabel="‹ Cancelar" title="Nuevo Producto" />
 
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
-        {/* Image */}
-        <TouchableOpacity style={styles.imagePicker} onPress={pickImage} activeOpacity={0.85}>
-          {imagenUri ? (
-            <Image source={{ uri: imagenUri }} style={styles.imagePreview} />
-          ) : (
-            <View style={styles.imagePlaceholder}>
-              <Text style={styles.imagePlaceholderIcon}>📷</Text>
-              <Text style={styles.imagePlaceholderText}>Agregar foto</Text>
-            </View>
-          )}
-        </TouchableOpacity>
-        {imagenUri && (
-          <TouchableOpacity onPress={pickImage} style={styles.changeImageBtn}>
-            <Text style={styles.changeImageText}>Cambiar foto</Text>
-          </TouchableOpacity>
-        )}
 
-        {/* Name */}
-        <Controller
-          control={control} name="nombre"
-          rules={{ required: 'El nombre es obligatorio' }}
-          render={({ field: { onChange, value } }) => (
-            <Input label="Nombre del producto *" value={value} onChangeText={onChange}
-              placeholder="Ej. Anillo solitario" error={errors.nombre?.message} />
-          )}
-        />
+        {/* Image + info lado a lado */}
+        <View style={styles.topRow}>
+          <TouchableOpacity style={styles.imagePicker} onPress={pickImage} activeOpacity={0.85}>
+            {imagenUri ? (
+              <Image source={{ uri: imagenUri }} style={styles.imagePreview} />
+            ) : (
+              <View style={styles.imagePlaceholder}>
+                <Text style={styles.imagePlaceholderIcon}>📷</Text>
+                <Text style={styles.imagePlaceholderText}>Foto</Text>
+              </View>
+            )}
+          </TouchableOpacity>
+
+          <View style={styles.topInfo}>
+            <Controller
+              control={control} name="nombre"
+              rules={{ required: 'El nombre es obligatorio' }}
+              render={({ field: { onChange, value } }) => (
+                <Input label="Nombre *" value={value} onChangeText={onChange}
+                  placeholder="Ej. Anillo solitario" error={errors.nombre?.message} />
+              )}
+            />
+            <Controller
+              control={control} name="precio_venta"
+              rules={{ required: 'Requerido', pattern: { value: /^\d+(\.\d{1,2})?$/, message: 'Solo números' } }}
+              render={({ field: { onChange, value } }) => (
+                <Input label="Precio venta (₡) *" value={value}
+                  onChangeText={v => onChange(v.replace(/[^0-9.]/g, ''))}
+                  keyboardType="numeric" placeholder="18000" error={errors.precio_venta?.message} />
+              )}
+            />
+            <Controller
+              control={control} name="precio_costo"
+              rules={{ required: 'Requerido', pattern: { value: /^\d+(\.\d{1,2})?$/, message: 'Solo números' } }}
+              render={({ field: { onChange, value } }) => (
+                <Input label="Precio costo (₡) *" value={value}
+                  onChangeText={v => onChange(v.replace(/[^0-9.]/g, ''))}
+                  keyboardType="numeric" placeholder="5000" error={errors.precio_costo?.message} />
+              )}
+            />
+            <Controller
+              control={control} name="cantidad"
+              rules={{ required: 'Requerido', pattern: { value: /^\d+$/, message: 'Solo números enteros' } }}
+              render={({ field: { onChange, value } }) => (
+                <Input label="Cantidad *" value={value}
+                  onChangeText={v => onChange(v.replace(/[^0-9]/g, ''))}
+                  keyboardType="numeric" placeholder="5" error={errors.cantidad?.message} />
+              )}
+            />
+          </View>
+        </View>
 
         {/* Category */}
-        <RequiredLabel label="Category" />
+        <RequiredLabel label="Categoría" />
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 14 }}>
           <View style={styles.chipsRow}>
             {categorias.map(cat => (
               <TouchableOpacity
                 key={cat.id}
                 style={[styles.chip, catSeleccionada === cat.id && styles.chipActive,
-                  catError && !catSeleccionada && styles.chipError]}
+                  catError && styles.chipError]}
                 onPress={() => setCatSeleccionada(cat.id)}
               >
                 <Text style={[styles.chipText, catSeleccionada === cat.id && styles.chipTextActive]}>
@@ -158,7 +184,7 @@ export default function NewProductScreen() {
         {/* Size */}
         {tallas.length > 0 && (
           <>
-            <RequiredLabel label="Size" />
+            <RequiredLabel label="Talla" />
             <View style={styles.tallasGrid}>
               {tallas.map(t => (
                 <TouchableOpacity
@@ -194,42 +220,11 @@ export default function NewProductScreen() {
           ))}
         </View>
 
-        {/* Sale price */}
-        <Controller
-          control={control} name="precio_venta"
-          rules={{ required: 'El precio de venta es obligatorio', pattern: { value: /^\d+(\.\d{1,2})?$/, message: 'Precio inválido' } }}
-          render={({ field: { onChange, value } }) => (
-            <Input label="Precio de venta (₡) *" value={value} onChangeText={onChange}
-              keyboardType="numeric" placeholder="18000" error={errors.precio_venta?.message} />
-          )}
-        />
-
-        {/* Cost price */}
-        <Controller
-          control={control} name="precio_costo"
-          rules={{ required: 'El precio de costo es obligatorio', pattern: { value: /^\d+(\.\d{1,2})?$/, message: 'Precio inválido' } }}
-          render={({ field: { onChange, value } }) => (
-            <Input label="Precio de costo (₡) * — lo que pagaste a la proveedora"
-              value={value} onChangeText={onChange}
-              keyboardType="numeric" placeholder="5000" error={errors.precio_costo?.message} />
-          )}
-        />
-
-        {/* Quantity */}
-        <Controller
-          control={control} name="cantidad"
-          rules={{ required: 'La cantidad es obligatoria', pattern: { value: /^\d+$/, message: 'Ingresá un número entero' } }}
-          render={({ field: { onChange, value } }) => (
-            <Input label="Cantidad inicial *" value={value} onChangeText={onChange}
-              keyboardType="numeric" placeholder="5" error={errors.cantidad?.message} />
-          )}
-        />
-
         {/* Description */}
         <Controller
           control={control} name="descripcion"
           render={({ field: { onChange, value } }) => (
-            <Input label="Descripción / Detalles (opcional)" value={value} onChangeText={onChange}
+            <Input label="Descripción (opcional)" value={value} onChangeText={onChange}
               placeholder="Material, largo, detalles especiales..."
               multiline numberOfLines={3} style={{ height: 80, textAlignVertical: 'top' }} />
           )}
@@ -259,19 +254,19 @@ const styles = StyleSheet.create({
   scroll: { flex: 1 },
   content: { padding: SIZES.lg },
 
+  topRow: { flexDirection: 'row', gap: 16, marginBottom: 16 },
   imagePicker: {
-    width: '100%', aspectRatio: 1, borderRadius: SIZES.radiusLg,
-    overflow: 'hidden', marginBottom: 8, borderWidth: 1, borderColor: COLORS.border,
+    width: 120, height: 120, borderRadius: SIZES.radiusLg,
+    overflow: 'hidden', borderWidth: 1, borderColor: COLORS.border, flexShrink: 0,
   },
   imagePreview: { width: '100%', height: '100%' },
   imagePlaceholder: {
     flex: 1, backgroundColor: COLORS.blush,
-    alignItems: 'center', justifyContent: 'center', gap: 8,
+    alignItems: 'center', justifyContent: 'center', gap: 4,
   },
-  imagePlaceholderIcon: { fontSize: 40 },
-  imagePlaceholderText: { fontSize: 14, color: COLORS.textMuted, fontWeight: '500' },
-  changeImageBtn: { alignItems: 'center', marginBottom: 16 },
-  changeImageText: { fontSize: 13, color: COLORS.wine, fontWeight: '500' },
+  imagePlaceholderIcon: { fontSize: 28 },
+  imagePlaceholderText: { fontSize: 11, color: COLORS.textMuted, fontWeight: '500' },
+  topInfo: { flex: 1 },
 
   fieldLabel: {
     fontSize: SIZES.textXs, fontWeight: '600', color: COLORS.textMuted,

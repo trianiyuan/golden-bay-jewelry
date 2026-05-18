@@ -32,25 +32,20 @@ export default function InventoryScreen() {
   const [stockBajoFilter, setStockBajoFilter] = useState(filter === 'stock_bajo');
   const [loading, setLoading] = useState(true);
 
-  // Responsive columns
   const numColumns = width > 900 ? 4 : width > 600 ? 3 : 2;
   const cardWidth = (width - SIZES.lg * 2 - 10 * (numColumns - 1)) / numColumns;
-  const maxCardWidth = 280;
-  const finalCardWidth = Math.min(cardWidth, maxCardWidth);
+  const finalCardWidth = Math.min(cardWidth, 280);
 
   const cargar = useCallback(async () => {
     try {
       const [p, c] = await Promise.all([getProductos(), getCategorias()]);
       setProductos(p);
       setCategorias(c);
-    } finally {
-      setLoading(false);
-    }
+    } finally { setLoading(false); }
   }, []);
 
   useFocusEffect(cargar);
 
-  // Apply stock_bajo filter from params
   React.useEffect(() => {
     if (filter === 'stock_bajo') setStockBajoFilter(true);
   }, [filter]);
@@ -70,21 +65,19 @@ export default function InventoryScreen() {
     <SafeAreaView style={styles.safe}>
       <PageHeader
         title="Inventario"
-        rightElement={<TouchableOpacity style={styles.btnAgregar} onPress={() => router.push('/product/new')} activeOpacity={0.85}><Text style={styles.btnAgregarText}>+ Agregar</Text></TouchableOpacity>}
+        rightElement={
+          <TouchableOpacity style={styles.btnAgregar} onPress={() => router.push('/product/new')} activeOpacity={0.85}>
+            <Text style={styles.btnAgregarText}>+ Agregar</Text>
+          </TouchableOpacity>
+        }
       />
-
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
-        {/* Stock bajo alert banner */}
         {stockBajoFilter && (
-          <TouchableOpacity
-            style={styles.alertBanner}
-            onPress={() => setStockBajoFilter(false)}
-          >
+          <TouchableOpacity style={styles.alertBanner} onPress={() => setStockBajoFilter(false)}>
             <Text style={styles.alertText}>⚠️ Mostrando productos con stock bajo — toca para limpiar</Text>
           </TouchableOpacity>
         )}
 
-        {/* Search */}
         <View style={styles.searchBar}>
           <Text style={styles.searchIcon}>🔍</Text>
           <TextInput
@@ -101,69 +94,41 @@ export default function InventoryScreen() {
           )}
         </View>
 
-        {/* Category filters */}
-        <ScrollView
-          horizontal showsHorizontalScrollIndicator={false}
-          style={styles.chipsScroll} contentContainerStyle={styles.chipsContent}
-        >
-          <TouchableOpacity
-            style={[styles.chip, catActiva === 'todos' && styles.chipActive]}
-            onPress={() => setCatActiva('todos')}
-          >
-            <Text style={[styles.chipText, catActiva === 'todos' && styles.chipTextActive]}>All</Text>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipsScroll} contentContainerStyle={styles.chipsContent}>
+          <TouchableOpacity style={[styles.chip, catActiva === 'todos' && styles.chipActive]} onPress={() => setCatActiva('todos')}>
+            <Text style={[styles.chipText, catActiva === 'todos' && styles.chipTextActive]}>Todos</Text>
           </TouchableOpacity>
           {categorias.map(cat => (
-            <TouchableOpacity
-              key={cat.id}
-              style={[styles.chip, catActiva === cat.id && styles.chipActive]}
-              onPress={() => { setCatActiva(cat.id); setTipoArete('todos'); }}
-            >
-              <Text style={[styles.chipText, catActiva === cat.id && styles.chipTextActive]}>
-                {cat.nombre}
-              </Text>
+            <TouchableOpacity key={cat.id} style={[styles.chip, catActiva === cat.id && styles.chipActive]}
+              onPress={() => { setCatActiva(cat.id); setTipoArete('todos'); }}>
+              <Text style={[styles.chipText, catActiva === cat.id && styles.chipTextActive]}>{cat.nombre}</Text>
             </TouchableOpacity>
           ))}
         </ScrollView>
 
-        {/* Earring subfilter */}
         {esAretes && (
           <View style={styles.subfilterRow}>
             <Text style={styles.subfilterLabel}>TIPO:</Text>
             {['todos', 'regular', 'ear_cuff'].map(tipo => (
-              <TouchableOpacity
-                key={tipo}
-                style={[styles.subchip, tipoArete === tipo && styles.subchipActive]}
-                onPress={() => setTipoArete(tipo)}
-              >
-                <Text style={styles.subchipText}>
-                  {tipo === 'todos' ? 'All' : tipo === 'regular' ? 'Regular' : 'Ear Cuff'}
-                </Text>
+              <TouchableOpacity key={tipo} style={[styles.subchip, tipoArete === tipo && styles.subchipActive]} onPress={() => setTipoArete(tipo)}>
+                <Text style={styles.subchipText}>{tipo === 'todos' ? 'All' : tipo === 'regular' ? 'Regular' : 'Ear Cuff'}</Text>
               </TouchableOpacity>
             ))}
           </View>
         )}
 
-        {/* Color filter */}
         <View style={[styles.subfilterRow, { marginBottom: 14 }]}>
           <Text style={styles.subfilterLabel}>COLOR:</Text>
           {COLORES.map(c => (
-            <TouchableOpacity
-              key={c.key}
-              style={[styles.subchip, colorActivo === c.key && styles.subchipActive]}
-              onPress={() => setColorActivo(c.key)}
-            >
+            <TouchableOpacity key={c.key} style={[styles.subchip, colorActivo === c.key && styles.subchipActive]} onPress={() => setColorActivo(c.key)}>
               {c.dot && <View style={[styles.colorDot, { backgroundColor: c.dot }]} />}
               <Text style={styles.subchipText}>{c.label}</Text>
             </TouchableOpacity>
           ))}
         </View>
 
-        {/* Results count */}
-        <Text style={styles.resultsCount}>
-          {productosFiltrados.length} producto{productosFiltrados.length !== 1 ? 's' : ''}
-        </Text>
+        <Text style={styles.resultsCount}>{productosFiltrados.length} producto{productosFiltrados.length !== 1 ? 's' : ''}</Text>
 
-        {/* Product grid — responsive */}
         <View style={styles.grid}>
           {productosFiltrados.map(p => (
             <View key={p.id} style={{ width: finalCardWidth }}>
@@ -174,9 +139,7 @@ export default function InventoryScreen() {
 
         {productosFiltrados.length === 0 && !loading && (
           <View style={styles.empty}>
-            <Text style={styles.emptyText}>
-              {stockBajoFilter ? '✓ No low stock productos' : 'Sin productos con estos filtros'}
-            </Text>
+            <Text style={styles.emptyText}>{stockBajoFilter ? '✓ Todo el stock en orden' : 'Sin productos con estos filtros'}</Text>
           </View>
         )}
       </ScrollView>
@@ -186,56 +149,29 @@ export default function InventoryScreen() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: COLORS.surface },
-  btnAgregar: {
-    backgroundColor: COLORS.wine, borderRadius: SIZES.radiusSm,
-    paddingVertical: 8, paddingHorizontal: 13,
-  },
+  btnAgregar: { backgroundColor: COLORS.wine, borderRadius: 10, paddingVertical: 8, paddingHorizontal: 14, shadowColor: '#622632', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.3, shadowRadius: 8 },
   btnAgregarText: { fontSize: 12, fontWeight: '600', color: COLORS.surface },
-
   scroll: { flex: 1, backgroundColor: COLORS.background },
   content: { padding: SIZES.lg },
-
-  alertBanner: {
-    backgroundColor: COLORS.rose, borderRadius: SIZES.radiusMd,
-    padding: 10, marginBottom: 12, borderWidth: 1, borderColor: COLORS.wine,
-  },
+  alertBanner: { backgroundColor: '#FFF0EE', borderRadius: 12, padding: 10, marginBottom: 12, borderWidth: 1, borderColor: '#E8A090' },
   alertText: { fontSize: 12, color: COLORS.wine, fontWeight: '500', textAlign: 'center' },
-
-  searchBar: {
-    backgroundColor: COLORS.surfaceAlt, borderRadius: SIZES.radiusMd,
-    borderWidth: 1, borderColor: COLORS.border,
-    padding: 10, flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12,
-  },
+  searchBar: { backgroundColor: 'white', borderRadius: 12, borderWidth: 1, borderColor: 'rgba(232,200,184,0.6)', padding: 10, flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12, shadowColor: '#622632', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.04, shadowRadius: 8 },
   searchIcon: { fontSize: 14 },
   searchInput: { flex: 1, fontSize: 13, color: COLORS.textPrimary, padding: 0 },
-
   chipsScroll: { marginBottom: 8 },
   chipsContent: { gap: 8, paddingRight: 4 },
-  chip: {
-    paddingHorizontal: 14, paddingVertical: 6,
-    borderRadius: SIZES.radiusFull, borderWidth: 1, borderColor: COLORS.border,
-    backgroundColor: COLORS.surfaceAlt,
-  },
+  chip: { paddingHorizontal: 14, paddingVertical: 7, borderRadius: 20, borderWidth: 1, borderColor: 'rgba(232,200,184,0.6)', backgroundColor: 'white' },
   chipActive: { backgroundColor: COLORS.wine, borderColor: COLORS.wine },
   chipText: { fontSize: 12, fontWeight: '500', color: COLORS.textPrimary },
   chipTextActive: { color: COLORS.surface },
-
   subfilterRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8, flexWrap: 'wrap' },
   subfilterLabel: { fontSize: 10, fontWeight: '600', color: COLORS.textMuted, letterSpacing: 0.5 },
-  subchip: {
-    flexDirection: 'row', alignItems: 'center', gap: 4,
-    paddingHorizontal: 11, paddingVertical: 4,
-    borderRadius: SIZES.radiusFull, borderWidth: 1, borderColor: COLORS.border,
-    backgroundColor: COLORS.surfaceAlt,
-  },
-  subchipActive: { backgroundColor: COLORS.blush, borderColor: COLORS.peach },
+  subchip: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 11, paddingVertical: 5, borderRadius: 20, borderWidth: 1, borderColor: 'rgba(232,200,184,0.6)', backgroundColor: 'white' },
+  subchipActive: { backgroundColor: '#ECABA0', borderColor: '#E09080' },
   subchipText: { fontSize: 11, fontWeight: '500', color: COLORS.textPrimary },
   colorDot: { width: 9, height: 9, borderRadius: 999, borderWidth: 1, borderColor: 'rgba(0,0,0,0.1)' },
-
   resultsCount: { fontSize: 11, color: COLORS.textMuted, marginBottom: 10 },
-
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-
   empty: { padding: 24, alignItems: 'center' },
   emptyText: { color: COLORS.textMuted, fontSize: 13 },
 });

@@ -62,17 +62,13 @@ export async function registrarVenta(params: {
 
   // Descontar stock
   for (const item of params.carrito) {
-    await supabase.rpc('ajustar_stock', {
-      p_producto_id: item.producto.id,
-      p_cantidad: -item.cantidad,
-      p_motivo: 'Venta',
-      p_venta_id: venta.id,
-    }).catch(() => {
-      // Si no existe el RPC, actualizar manualmente
-      supabase.from('productos')
-        .update({ cantidad: item.producto.cantidad - item.cantidad })
-        .eq('id', item.producto.id);
-    });
+    const { error: stockError } = await supabase.rpc('ajustar_stock', {
+  p_producto_id: item.producto.id,
+  p_cantidad: -item.cantidad,
+  p_motivo: 'Venta',
+  p_venta_id: venta.id,
+});
+if (stockError) throw stockError;
   }
 
   return venta.id;

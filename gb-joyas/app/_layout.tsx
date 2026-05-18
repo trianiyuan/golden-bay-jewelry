@@ -1,8 +1,24 @@
 import { useEffect, useState } from 'react';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import { View, StyleSheet, useWindowDimensions } from 'react-native';
 import { supabase } from '../lib/supabase';
 import { useAuthStore } from '../stores/authStore';
+
+function MaxWidthWrapper({ children }: { children: React.ReactNode }) {
+  const { width } = useWindowDimensions();
+  const isWide = width > 768;
+
+  if (!isWide) return <>{children}</>;
+
+  return (
+    <View style={styles.outerContainer}>
+      <View style={styles.innerContainer}>
+        {children}
+      </View>
+    </View>
+  );
+}
 
 export default function RootLayout() {
   const { session, setSession } = useAuthStore();
@@ -36,16 +52,32 @@ export default function RootLayout() {
 
   return (
     <>
-      <StatusBar style="dark" backgroundColor="#FDF7F5" />
-      <Stack screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="(tabs)" />
-        <Stack.Screen name="(auth)" />
-        <Stack.Screen name="product/[id]" options={{ presentation: 'modal' }} />
-        <Stack.Screen name="product/new" options={{ presentation: 'modal' }} />
-        <Stack.Screen name="sale/new" options={{ presentation: 'modal' }} />
-        <Stack.Screen name="expense/new" options={{ presentation: 'modal' }} />
-        <Stack.Screen name="settings" options={{ presentation: 'modal' }} />
-      </Stack>
+      <StatusBar style="dark" backgroundColor="#EDD3B9" />
+      <MaxWidthWrapper>
+        <Stack screenOptions={{ headerShown: false }}>
+          <Stack.Screen name="(tabs)" />
+          <Stack.Screen name="(auth)" />
+          <Stack.Screen name="product/[id]" options={{ presentation: 'modal' }} />
+          <Stack.Screen name="product/new" options={{ presentation: 'modal' }} />
+          <Stack.Screen name="sale/new" options={{ presentation: 'modal' }} />
+          <Stack.Screen name="expense/new" options={{ presentation: 'modal' }} />
+          <Stack.Screen name="settings" options={{ presentation: 'modal' }} />
+        </Stack>
+      </MaxWidthWrapper>
     </>
   );
 }
+
+const styles = StyleSheet.create({
+  outerContainer: {
+    flex: 1,
+    backgroundColor: '#EDD3B9',
+    alignItems: 'center',
+  },
+  innerContainer: {
+    width: '100%',
+    maxWidth: 1200,
+    flex: 1,
+    backgroundColor: '#FFF1ED',
+  },
+});
