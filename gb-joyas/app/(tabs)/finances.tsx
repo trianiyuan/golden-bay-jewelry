@@ -1,13 +1,17 @@
 // app/(tabs)/finances.tsx
 import React, { useState, useCallback } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, SafeAreaView } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, SafeAreaView, ActivityIndicator } from 'react-native';
 import { useFocusEffect } from 'expo-router';
 import { getResumenMes, getResumenUltimosMeses, getGastosPorCategoria } from '../../lib/queries/finances';
+import { getVentas } from '../../lib/queries/sales';
+import { getProductos } from '../../lib/queries/products';
 import { ResumenMes } from '../../types';
 import { COLORS, SIZES } from '../../constants/colors';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { PageHeader } from '../../components/ui/Header';
+import { generarPDFMensual } from '../../lib/generatePDF';
+
 
 export default function FinancesScreen() {
   const [mes, setMes] = useState(new Date());
@@ -15,6 +19,8 @@ export default function FinancesScreen() {
   const [historico, setHistorico] = useState<ResumenMes[]>([]);
   const [gastosCat, setGastosCat] = useState<{ nombre: string; total: number }[]>([]);
   const [loading, setLoading] = useState(true);
+  const [tipoPDF, setTipoPDF] = useState<'mensual' | 'anual'>('mensual');
+  const [generando, setGenerando] = useState(false);
 
   const cargar = useCallback(() => {
     async function fetchData() {
@@ -48,13 +54,56 @@ export default function FinancesScreen() {
     return '📊 Este mes los gastos superaron las ventas. Revisa tus costos.';
   }
 
+  async function descargarPDF() {
+  if (!resumen) return;
+  try {
+    setGenerando(true);
+    const ventas = await getVentas(mes);
+
+    const canalMap: Record<string, number> = {};
+    ventas.forEach(v => {
+      const nombre = (v as any).canal_venta?.nombre || 'Otros';
+      canalMap[nombre] = (canalMap[nombre] || 0) + Number(v.total_cobrado);
+    });
+    const ventasPorCanal = Object.entries(canalMap)
+      .map(([nombre, total]) => ({ nombre, total }))
+      .sort((a, b) => b.total - a.total);
+
+    const productoMap: Record<string, { nombre: string; cantidad: number; total: number }> = {};
+    ventas.forEach(v => {
+      (v.productos || []).forEach((vp: any) => {
+        const nombre = vp.producto?.nombre || 'Producto';
+        if (!productoMap[nombre]) productoMap[nombre] = { nombre, cantidad: 0, total: 0 };
+        productoMap[nombre].cantidad += vp.cantidad;
+        productoMap[nombre].total += vp.precio_unitario * vp.cantidad;
+      });
+    });
+    const topProductos = Object.values(productoMap).sort((a, b) => b.total - a.total);
+
+    await generarPDFMensual({
+      resumen,
+      gastosPorCategoria: gastosCat,
+      ventasPorCanal,
+      topProductos,
+      mes,
+      tipo: tipoPDF,
+    });
+  } catch (e: any) {
+    console.error('Error generando PDF:', e);
+  } finally {
+    setGenerando(false);
+  }
+}
+
+  const mesesLabel = format(mes, 'MMMM yyyy', { locale: es });
+
   return (
     <SafeAreaView style={styles.safe}>
       <PageHeader title="Finanzas" />
 
       <View style={styles.mesSelector}>
         <TouchableOpacity onPress={() => cambiarMes(-1)} style={styles.mesBtn}><Text style={styles.mesBtnText}>‹</Text></TouchableOpacity>
-        <Text style={styles.mesNombre}>{format(mes, 'MMMM yyyy', { locale: es })}</Text>
+        <Text style={styles.mesNombre}>{mesesLabel}</Text>
         <TouchableOpacity onPress={() => cambiarMes(1)} style={styles.mesBtn}><Text style={styles.mesBtnText}>›</Text></TouchableOpacity>
       </View>
 
@@ -148,6 +197,86 @@ export default function FinancesScreen() {
           </View>
         </View>
 
+        {/* SECCIÓN PDF */}
+        <View style={styles.pdfCard}>
+          <View style={styles.pdfCardHeader}>
+            <View style={styles.pdfHeaderIcon}>
+              <Text style={styles.pdfHeaderIconText}>↓</Text>
+            </View>
+            <View>
+              <Text style={styles.pdfCardTitle}>Generar reporte</Text>
+              <Text style={styles.pdfCardSub}>Exportá tus datos financieros en PDF</Text>
+            </View>
+          </View>
+
+          <View style={styles.pdfTipoRow}>
+            <TouchableOpacity
+              style={[styles.tipoBtn, tipoPDF === 'mensual' && styles.tipoBtnActive]}
+              onPress={() => setTipoPDF('mensual')}
+              activeOpacity={0.85}
+            >
+              <View style={styles.tipoContent}>
+                <Text style={[styles.tipoIcon, tipoPDF === 'mensual' && styles.tipoIconActive]}>▦</Text>
+                <View style={styles.tipoInfo}>
+                  <Text style={[styles.tipoName, tipoPDF === 'mensual' && styles.tipoNameActive]}>Mensual</Text>
+                  <Text style={styles.tipoDesc}>{mesesLabel}</Text>
+                </View>
+              </View>
+              <View style={[styles.tipoCheck, tipoPDF === 'mensual' && styles.tipoCheckActive]}>
+                {tipoPDF === 'mensual' && <View style={styles.tipoCheckInner} />}
+              </View>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.tipoBtn, tipoPDF === 'anual' && styles.tipoBtnActive]}
+              onPress={() => setTipoPDF('anual')}
+              activeOpacity={0.85}
+            >
+              <View style={styles.tipoContent}>
+                <Text style={[styles.tipoIcon, tipoPDF === 'anual' && styles.tipoIconActive]}>▤</Text>
+                <View style={styles.tipoInfo}>
+                  <Text style={[styles.tipoName, tipoPDF === 'anual' && styles.tipoNameActive]}>Anual</Text>
+                  <Text style={styles.tipoDesc}>{mes.getFullYear()}</Text>
+                </View>
+              </View>
+              <View style={[styles.tipoCheck, tipoPDF === 'anual' && styles.tipoCheckActive]}>
+                {tipoPDF === 'anual' && <View style={styles.tipoCheckInner} />}
+              </View>
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.pdfDivider} />
+
+          <Text style={styles.pdfContenidoLabel}>INCLUYE</Text>
+          <View style={styles.pdfContenidoGrid}>
+            {['Resumen financiero', 'Estado de resultados', 'Ventas por canal', 'Top productos', 'Gastos por categoría', 'Valor inventario'].map(item => (
+              <View key={item} style={styles.pdfContenidoItem}>
+                <View style={styles.pdfContenidoDot} />
+                <Text style={styles.pdfContenidoText}>{item}</Text>
+              </View>
+            ))}
+          </View>
+
+          <TouchableOpacity
+            style={[styles.downloadBtn, generando && { opacity: 0.7 }]}
+            onPress={descargarPDF}
+            disabled={generando}
+            activeOpacity={0.85}
+          >
+            {generando ? (
+              <ActivityIndicator color="#FFF1ED" size="small" />
+            ) : (
+              <>
+                <Text style={styles.downloadIcon}>↓</Text>
+                <View>
+                  <Text style={styles.downloadText}>Descargar PDF</Text>
+                  <Text style={styles.downloadSub}>{tipoPDF === 'mensual' ? mesesLabel : String(mes.getFullYear())} · ~2 segundos</Text>
+                </View>
+              </>
+            )}
+          </TouchableOpacity>
+        </View>
+
         <View style={{ height: 20 }} />
       </ScrollView>
     </SafeAreaView>
@@ -191,4 +320,35 @@ const styles = StyleSheet.create({
   metricSmall: { flex: 1, backgroundColor: 'white', borderRadius: 12, padding: 12, borderWidth: 1, borderColor: 'rgba(232,200,184,0.5)', alignItems: 'center', justifyContent: 'center', shadowColor: '#622632', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 6 },
   metricSmallLabel: { fontSize: 9, color: COLORS.textMuted, letterSpacing: 0.7, marginBottom: 4, textAlign: 'center', fontWeight: '600' },
   metricSmallValue: { fontSize: 13, fontWeight: '700', color: COLORS.textPrimary, textAlign: 'center' },
+
+  // PDF Section
+  pdfCard: { backgroundColor: 'white', borderRadius: 16, borderWidth: 1, borderColor: 'rgba(232,200,184,0.5)', marginTop: 8, overflow: 'hidden', shadowColor: '#622632', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 12 },
+  pdfCardHeader: { backgroundColor: '#622632', padding: 16, flexDirection: 'row', alignItems: 'center', gap: 12 },
+  pdfHeaderIcon: { width: 40, height: 40, borderRadius: 10, backgroundColor: 'rgba(255,241,237,0.15)', alignItems: 'center', justifyContent: 'center' },
+  pdfHeaderIconText: { fontSize: 20, color: '#FFF1ED', fontWeight: '700' },
+  pdfCardTitle: { fontSize: 14, fontWeight: '700', color: '#FFF1ED' },
+  pdfCardSub: { fontSize: 11, color: 'rgba(255,241,237,0.7)', marginTop: 2 },
+  pdfTipoRow: { flexDirection: 'row', gap: 10, padding: 16, paddingBottom: 0 },
+  tipoBtn: { flex: 1, borderRadius: 12, padding: 12, borderWidth: 1.5, borderColor: 'rgba(232,200,184,0.6)', backgroundColor: '#FFF8F5', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  tipoBtnActive: { borderColor: '#622632', backgroundColor: '#FFF1ED' },
+  tipoContent: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  tipoIcon: { fontSize: 18, color: '#B89080' },
+  tipoIconActive: { color: '#622632' },
+  tipoInfo: { },
+  tipoName: { fontSize: 12, fontWeight: '600', color: '#1A0A0A' },
+  tipoNameActive: { color: '#622632' },
+  tipoDesc: { fontSize: 10, color: '#8F5C52', marginTop: 1, textTransform: 'capitalize' },
+  tipoCheck: { width: 18, height: 18, borderRadius: 9, borderWidth: 1.5, borderColor: 'rgba(232,200,184,0.8)', alignItems: 'center', justifyContent: 'center' },
+  tipoCheckActive: { backgroundColor: '#622632', borderColor: '#622632' },
+  tipoCheckInner: { width: 8, height: 8, borderRadius: 4, backgroundColor: 'white' },
+  pdfDivider: { height: 1, backgroundColor: 'rgba(232,200,184,0.4)', margin: 16, marginBottom: 12 },
+  pdfContenidoLabel: { fontSize: 9, fontWeight: '700', color: '#8F5C52', letterSpacing: 0.8, paddingHorizontal: 16, marginBottom: 8 },
+  pdfContenidoGrid: { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 16, gap: 6, marginBottom: 16 },
+  pdfContenidoItem: { flexDirection: 'row', alignItems: 'center', gap: 6, width: '48%' },
+  pdfContenidoDot: { width: 5, height: 5, borderRadius: 2.5, backgroundColor: '#ECABA0' },
+  pdfContenidoText: { fontSize: 11, color: '#5C3030' },
+  downloadBtn: { margin: 16, marginTop: 0, backgroundColor: '#622632', borderRadius: 12, padding: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, shadowColor: '#622632', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.35, shadowRadius: 12 },
+  downloadIcon: { fontSize: 20, color: '#FFF1ED', fontWeight: '700' },
+  downloadText: { fontSize: 14, fontWeight: '600', color: '#FFF1ED' },
+  downloadSub: { fontSize: 10, color: 'rgba(255,241,237,0.7)', marginTop: 1, textTransform: 'capitalize' },
 });
