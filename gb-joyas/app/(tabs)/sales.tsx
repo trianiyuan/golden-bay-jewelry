@@ -2,7 +2,7 @@
 import React, { useState, useCallback } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity, StyleSheet,
-  SafeAreaView, Modal, Alert, ActivityIndicator,
+  SafeAreaView, Modal, Alert, ActivityIndicator, Image,
 } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { useForm, Controller } from 'react-hook-form';
@@ -48,6 +48,10 @@ export default function SalesScreen() {
 
   function totalUnidades(venta: Venta): number {
     return (venta.productos || []).reduce((sum: number, vp: any) => sum + (vp.cantidad || 1), 0);
+  }
+
+  function totalProductosDistintos(venta: Venta): number {
+    return (venta.productos || []).length;
   }
 
   function abrirEditar(venta: Venta) {
@@ -114,6 +118,7 @@ export default function SalesScreen() {
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
         {ventas.map(venta => {
           const unidades = totalUnidades(venta);
+          const distintos = totalProductosDistintos(venta);
           return (
             <View key={venta.id} style={styles.ventaCard}>
               <TouchableOpacity style={styles.ventaMain} onPress={() => abrirEditar(venta)} activeOpacity={0.85}>
@@ -123,7 +128,7 @@ export default function SalesScreen() {
                 <View style={styles.ventaInfo}>
                   <Text style={styles.ventaNombre}>{venta.cliente_nombre}</Text>
                   <Text style={styles.ventaDetalle} numberOfLines={1}>
-                    {unidades} unidad{unidades !== 1 ? 'es' : ''} · {venta.metodo_entrega === 'correos_cr' ? 'Correos CR' : 'Retiro personal'} · {new Date(venta.fecha).toLocaleDateString('es-CR', { day: 'numeric', month: 'short' })}
+                    {unidades} unidad{unidades !== 1 ? 'es' : ''} · {distintos} producto{distintos !== 1 ? 's' : ''} · {venta.metodo_entrega === 'correos_cr' ? 'Correos CR' : 'Retiro personal'} · {new Date(venta.fecha).toLocaleDateString('es-CR', { day: 'numeric', month: 'short' })}
                   </Text>
                   {(venta as any).canal_venta?.nombre && (
                     <View style={styles.canalBadge}><Text style={styles.canalText}>{(venta as any).canal_venta.nombre}</Text></View>
@@ -171,10 +176,45 @@ export default function SalesScreen() {
             </TouchableOpacity>
           </View>
           <ScrollView contentContainerStyle={styles.content}>
+
+            {/* Productos vendidos - solo lectura */}
+            {ventaSeleccionada && (ventaSeleccionada.productos || []).length > 0 && (
+              <View style={styles.productosSection}>
+                <Text style={styles.productosSectionTitle}>PRODUCTOS VENDIDOS</Text>
+                {(ventaSeleccionada.productos || []).map((vp: any, i: number) => (
+                  <View key={i} style={[styles.productoRow, i === (ventaSeleccionada.productos || []).length - 1 && { borderBottomWidth: 0 }]}>
+                    <View style={styles.productoImgBox}>
+                      {vp.producto?.imagen_url
+                        ? <Image source={{ uri: vp.producto.imagen_url }} style={{ width: '100%', height: '100%', borderRadius: 8 }} resizeMode="cover" />
+                        : <Text style={{ fontSize: 18 }}>💍</Text>
+                      }
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.productoNombre}>{vp.producto?.nombre || 'Producto'}</Text>
+                      <Text style={styles.productoMeta}>₡{(vp.precio_unitario || 0).toLocaleString('es-CR')} c/u</Text>
+                    </View>
+                    <View style={styles.qtyBadge}>
+                      <Text style={styles.qtyBadgeText}>×{vp.cantidad}</Text>
+                    </View>
+                    <Text style={styles.productoTotal}>₡{((vp.precio_unitario || 0) * vp.cantidad).toLocaleString('es-CR')}</Text>
+                  </View>
+                ))}
+                <View style={styles.productosTotalesRow}>
+                  <Text style={styles.productosTotalesLabel}>
+                    {totalUnidades(ventaSeleccionada)} unidades · {totalProductosDistintos(ventaSeleccionada)} productos
+                  </Text>
+                  <Text style={styles.productosTotalesMonto}>
+                    ₡{(ventaSeleccionada.productos || []).reduce((s: number, vp: any) => s + vp.precio_unitario * vp.cantidad, 0).toLocaleString('es-CR')}
+                  </Text>
+                </View>
+              </View>
+            )}
+
             <Controller control={control} name="cliente_nombre" rules={{ required: 'El nombre es obligatorio' }}
               render={({ field: { onChange, value } }) => (
                 <Input label="Nombre del cliente *" value={value} onChangeText={onChange} error={errors.cliente_nombre?.message} />
               )} />
+
             <Text style={styles.fieldLabel}>CANAL DE VENTA</Text>
             <View style={styles.canalesGrid}>
               {canales.map(canal => (
@@ -183,6 +223,7 @@ export default function SalesScreen() {
                 </TouchableOpacity>
               ))}
             </View>
+
             <Text style={styles.fieldLabel}>MÉTODO DE ENTREGA</Text>
             <View style={styles.entregaOptions}>
               {[{ key: 'correos_cr', label: 'Correos CR', emoji: '📬' }, { key: 'retiro_personal', label: 'Retiro personal', emoji: '🤝' }].map(opt => (
@@ -192,6 +233,7 @@ export default function SalesScreen() {
                 </TouchableOpacity>
               ))}
             </View>
+
             <Controller control={control} name="total_recibido"
               render={({ field: { onChange, value } }) => (
                 <Input label="Monto recibido (₡)" value={value} onChangeText={onChange} keyboardType="numeric" />
@@ -271,6 +313,21 @@ const styles = StyleSheet.create({
   modalCancelar: { fontSize: 14, color: COLORS.textMuted, fontWeight: '500' },
   modalTitulo: { fontSize: 15, fontWeight: '600', color: COLORS.textPrimary },
   modalGuardar: { fontSize: 14, color: COLORS.wine, fontWeight: '600' },
+
+  // Productos vendidos
+  productosSection: { backgroundColor: '#FFF8F5', borderRadius: 12, borderWidth: 1, borderColor: 'rgba(232,200,184,0.5)', padding: 12, marginBottom: 16 },
+  productosSectionTitle: { fontSize: 10, fontWeight: '600', color: COLORS.textMuted, letterSpacing: 0.8, marginBottom: 10 },
+  productoRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: 'rgba(232,200,184,0.4)' },
+  productoImgBox: { width: 38, height: 38, borderRadius: 8, backgroundColor: '#ECABA0', alignItems: 'center', justifyContent: 'center', flexShrink: 0, overflow: 'hidden' },
+  productoNombre: { fontSize: 12, fontWeight: '600', color: COLORS.textPrimary },
+  productoMeta: { fontSize: 11, color: COLORS.textMuted, marginTop: 1 },
+  qtyBadge: { backgroundColor: '#622632', borderRadius: 10, paddingHorizontal: 7, paddingVertical: 2 },
+  qtyBadgeText: { fontSize: 11, color: 'white', fontWeight: '600' },
+  productoTotal: { fontSize: 12, fontWeight: '600', color: COLORS.textPrimary, minWidth: 60, textAlign: 'right' },
+  productosTotalesRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 },
+  productosTotalesLabel: { fontSize: 11, color: COLORS.textMuted },
+  productosTotalesMonto: { fontSize: 12, fontWeight: '700', color: '#622632' },
+
   fieldLabel: { fontSize: SIZES.textXs, fontWeight: '600', color: COLORS.textMuted, letterSpacing: 0.7, marginBottom: 8, marginTop: 4 },
   canalesGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 14 },
   canalChip: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, borderWidth: 1, borderColor: 'rgba(232,200,184,0.6)', backgroundColor: 'white' },
