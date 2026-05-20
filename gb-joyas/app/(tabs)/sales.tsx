@@ -46,6 +46,10 @@ export default function SalesScreen() {
     setMes(prev => new Date(prev.getFullYear(), prev.getMonth() + delta, 1));
   }
 
+  function totalUnidades(venta: Venta): number {
+    return (venta.productos || []).reduce((sum: number, vp: any) => sum + (vp.cantidad || 1), 0);
+  }
+
   function abrirEditar(venta: Venta) {
     setVentaSeleccionada(venta);
     setCanalEditando((venta as any).canal_venta_id || '');
@@ -108,39 +112,42 @@ export default function SalesScreen() {
       )}
 
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
-        {ventas.map(venta => (
-          <View key={venta.id} style={styles.ventaCard}>
-            <TouchableOpacity style={styles.ventaMain} onPress={() => abrirEditar(venta)} activeOpacity={0.85}>
-              <View style={styles.avatar}>
-                <Text style={styles.avatarText}>{venta.cliente_nombre.slice(0, 2).toUpperCase()}</Text>
-              </View>
-              <View style={styles.ventaInfo}>
-                <Text style={styles.ventaNombre}>{venta.cliente_nombre}</Text>
-                <Text style={styles.ventaDetalle} numberOfLines={1}>
-                  {venta.productos?.length || 0} producto{(venta.productos?.length || 0) !== 1 ? 's' : ''} · {venta.metodo_entrega === 'correos_cr' ? 'Correos CR' : 'Retiro personal'} · {new Date(venta.fecha).toLocaleDateString('es-CR', { day: 'numeric', month: 'short' })}
-                </Text>
-                {(venta as any).canal_venta?.nombre && (
-                  <View style={styles.canalBadge}><Text style={styles.canalText}>{(venta as any).canal_venta.nombre}</Text></View>
-                )}
-                {venta.notas ? <Text style={styles.ventaNota} numberOfLines={1}>💬 {venta.notas}</Text> : null}
-              </View>
-              <View style={styles.ventaMonto}>
-                <Text style={styles.ventaMontoText}>₡{Math.round(Number(venta.total_cobrado) / 1000)}k</Text>
-                {Number(venta.total_recibido) < Number(venta.total_cobrado) && (
-                  <View style={styles.pendienteBadge}><Text style={styles.pendienteText}>Pendiente</Text></View>
-                )}
-              </View>
-            </TouchableOpacity>
-            <View style={styles.ventaAcciones}>
-              <TouchableOpacity style={styles.btnEditar} onPress={() => abrirEditar(venta)}>
-                <Text style={styles.btnEditarText}>✏️ Editar</Text>
+        {ventas.map(venta => {
+          const unidades = totalUnidades(venta);
+          return (
+            <View key={venta.id} style={styles.ventaCard}>
+              <TouchableOpacity style={styles.ventaMain} onPress={() => abrirEditar(venta)} activeOpacity={0.85}>
+                <View style={styles.avatar}>
+                  <Text style={styles.avatarText}>{venta.cliente_nombre.slice(0, 2).toUpperCase()}</Text>
+                </View>
+                <View style={styles.ventaInfo}>
+                  <Text style={styles.ventaNombre}>{venta.cliente_nombre}</Text>
+                  <Text style={styles.ventaDetalle} numberOfLines={1}>
+                    {unidades} unidad{unidades !== 1 ? 'es' : ''} · {venta.metodo_entrega === 'correos_cr' ? 'Correos CR' : 'Retiro personal'} · {new Date(venta.fecha).toLocaleDateString('es-CR', { day: 'numeric', month: 'short' })}
+                  </Text>
+                  {(venta as any).canal_venta?.nombre && (
+                    <View style={styles.canalBadge}><Text style={styles.canalText}>{(venta as any).canal_venta.nombre}</Text></View>
+                  )}
+                  {venta.notas ? <Text style={styles.ventaNota} numberOfLines={1}>💬 {venta.notas}</Text> : null}
+                </View>
+                <View style={styles.ventaMonto}>
+                  <Text style={styles.ventaMontoText}>₡{Math.round(Number(venta.total_cobrado) / 1000)}k</Text>
+                  {Number(venta.total_recibido) < Number(venta.total_cobrado) && (
+                    <View style={styles.pendienteBadge}><Text style={styles.pendienteText}>Pendiente</Text></View>
+                  )}
+                </View>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.btnEliminar} onPress={() => confirmarEliminar(venta)}>
-                <Text style={styles.btnEliminarText}>🗑 Eliminar</Text>
-              </TouchableOpacity>
+              <View style={styles.ventaAcciones}>
+                <TouchableOpacity style={styles.btnEditar} onPress={() => abrirEditar(venta)}>
+                  <Text style={styles.btnEditarText}>✏️ Editar</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.btnEliminar} onPress={() => confirmarEliminar(venta)}>
+                  <Text style={styles.btnEliminarText}>🗑 Eliminar</Text>
+                </TouchableOpacity>
+              </View>
             </View>
-          </View>
-        ))}
+          );
+        })}
         {ventas.length === 0 && !loading && (
           <View style={styles.empty}>
             <Text style={styles.emptyIcon}>🛍️</Text>
