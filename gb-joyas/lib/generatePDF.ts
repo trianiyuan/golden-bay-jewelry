@@ -97,6 +97,28 @@ export async function generarPDFMensual(data: PDFData) {
     </div>
   </div>
 
+<div class="section-wrap">
+    <div class="section-title">KPIs financieros</div>
+    <div class="cards">
+      <div class="card">
+        <div class="card-label">Margen bruto</div>
+        <div class="card-value">${data.resumen.ingresos_ventas > 0 ? Math.round((data.resumen.ganancia_bruta / data.resumen.ingresos_ventas) * 100) : 0}%</div>
+      </div>
+      <div class="card">
+        <div class="card-label">Margen neto</div>
+        <div class="card-value">${data.resumen.ingresos_ventas > 0 ? Math.round((data.resumen.ganancia / data.resumen.ingresos_ventas) * 100) : 0}%</div>
+      </div>
+      <div class="card">
+        <div class="card-label">Ticket promedio</div>
+        <div class="card-value">${data.resumen.total_ventas > 0 ? fmt(data.resumen.ingresos_ventas / data.resumen.total_ventas) : '₡0'}</div>
+      </div>
+      <div class="card">
+        <div class="card-label">Total ventas</div>
+        <div class="card-value">${data.resumen.total_ventas}</div>
+      </div>
+    </div>
+  </div>
+
   <div class="two-col">
     <div class="col">
       <div class="section-title">Estado de resultados</div>
