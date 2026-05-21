@@ -1,6 +1,6 @@
 // app/(tabs)/finances.tsx
 import React, { useState, useCallback } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, SafeAreaView, ActivityIndicator } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, SafeAreaView, ActivityIndicator, TextInput } from 'react-native';
 import { useFocusEffect } from 'expo-router';
 import { getResumenMes, getResumenUltimosMeses, getGastosPorCategoria } from '../../lib/queries/finances';
 import { getVentas } from '../../lib/queries/sales';
@@ -21,6 +21,9 @@ export default function FinancesScreen() {
   const [loading, setLoading] = useState(true);
   const [tipoPDF, setTipoPDF] = useState<'mensual' | 'anual'>('mensual');
   const [generando, setGenerando] = useState(false);
+  const [fechaInicio, setFechaInicio] = useState('');
+  const [fechaFin, setFechaFin] = useState('');
+  const [usarRangoPersonalizado, setUsarRangoPersonalizado] = useState(false);
 
   const cargar = useCallback(() => {
     async function fetchData() {
@@ -124,8 +127,17 @@ export default function FinancesScreen() {
         resumenPorMes: resumenesAnuales,
       });
     } else {
-      const ventas = await getVentas(mes);
-      const canalMap: Record<string, number> = {};
+      let ventasFiltradas;
+            if (usarRangoPersonalizado && fechaInicio && fechaFin) {
+              const todas = await getVentas();
+              ventasFiltradas = todas.filter(v => {
+                const fecha = v.fecha.split('T')[0];
+                return fecha >= fechaInicio && fecha <= fechaFin;
+              });
+            } else {
+              ventasFiltradas = await getVentas(mes);
+            }
+            const ventas = ventasFiltradas;      const canalMap: Record<string, number> = {};
       ventas.forEach(v => {
         const nombre = v.canal_venta?.nombre || 'Otros';
         canalMap[nombre] = (canalMap[nombre] || 0) + Number(v.total_cobrado);
@@ -145,13 +157,18 @@ export default function FinancesScreen() {
       });
       const topProductos = Object.values(productoMap).sort((a, b) => b.total - a.total);
 
+      const mesPDF = usarRangoPersonalizado && fechaInicio
+        ? new Date(fechaInicio)
+        : mes;
+
       await generarPDFMensual({
         resumen,
         gastosPorCategoria: gastosCat,
         ventasPorCanal,
         topProductos,
-        mes,
+        mes: mesPDF,
         tipo: 'mensual',
+        rangoPersonalizado: usarRangoPersonalizado ? { inicio: fechaInicio, fin: fechaFin } : undefined,
       });
     }
   } catch (e: any) {
@@ -311,6 +328,43 @@ export default function FinancesScreen() {
             </TouchableOpacity>
           </View>
 
+{tipoPDF === 'mensual' && (
+            <View style={{ paddingHorizontal: 16, paddingTop: 12 }}>
+              <TouchableOpacity
+                style={styles.rangoToggle}
+                onPress={() => setUsarRangoPersonalizado(prev => !prev)}
+              >
+                <Text style={styles.rangoToggleText}>
+                  {usarRangoPersonalizado ? '✓ Rango personalizado activo' : 'Usar rango de fechas personalizado'}
+                </Text>
+              </TouchableOpacity>
+              {usarRangoPersonalizado && (
+                <View style={styles.rangoRow}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.rangoLabel}>DESDE</Text>
+                    <TextInput
+                      style={styles.rangoInput}
+                      value={fechaInicio}
+                      onChangeText={setFechaInicio}
+                      placeholder="2026-05-01"
+                      placeholderTextColor={COLORS.textLight}
+                    />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.rangoLabel}>HASTA</Text>
+                    <TextInput
+                      style={styles.rangoInput}
+                      value={fechaFin}
+                      onChangeText={setFechaFin}
+                      placeholder="2026-05-31"
+                      placeholderTextColor={COLORS.textLight}
+                    />
+                  </View>
+                </View>
+              )}
+            </View>
+          )}
+
           <View style={styles.pdfDivider} />
 
           <Text style={styles.pdfContenidoLabel}>INCLUYE</Text>
@@ -417,4 +471,9 @@ const styles = StyleSheet.create({
   downloadIcon: { fontSize: 20, color: '#FFF1ED', fontWeight: '700' },
   downloadText: { fontSize: 14, fontWeight: '600', color: '#FFF1ED' },
   downloadSub: { fontSize: 10, color: 'rgba(255,241,237,0.7)', marginTop: 1, textTransform: 'capitalize' },
+  rangoToggle: { paddingVertical: 8, paddingHorizontal: 12, borderRadius: 8, borderWidth: 1, borderColor: 'rgba(232,200,184,0.6)', backgroundColor: '#FFF8F5', alignItems: 'center', marginBottom: 8 },
+  rangoToggleText: { fontSize: 12, color: COLORS.wine, fontWeight: '500' },
+  rangoRow: { flexDirection: 'row', gap: 10 },
+  rangoLabel: { fontSize: 9, fontWeight: '600', color: COLORS.textMuted, letterSpacing: 0.7, marginBottom: 4 },
+  rangoInput: { borderWidth: 1, borderColor: 'rgba(232,200,184,0.6)', borderRadius: 8, padding: 8, fontSize: 12, color: COLORS.textPrimary, backgroundColor: 'white' },
 });

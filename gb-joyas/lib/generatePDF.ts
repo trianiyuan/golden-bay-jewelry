@@ -8,6 +8,7 @@ interface PDFData {
   mes: Date;
   tipo: 'mensual' | 'anual';
   resumenPorMes?: ResumenMes[];
+  rangoPersonalizado?: { inicio: string; fin: string };
 }
 
 function fmt(n: number): string {
@@ -18,7 +19,9 @@ export async function generarPDFMensual(data: PDFData) {
   const meses = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
   const periodoLabel = data.tipo === 'anual'
     ? `Año ${data.mes.getFullYear()}`
-    : `${meses[data.mes.getMonth()]} ${data.mes.getFullYear()}`;
+    : data.rangoPersonalizado
+      ? `${data.rangoPersonalizado.inicio} al ${data.rangoPersonalizado.fin}`
+      : `${meses[data.mes.getMonth()]} ${data.mes.getFullYear()}`;
   const hoy = new Date().toLocaleDateString('es-CR', { day: 'numeric', month: 'long', year: 'numeric' });
 
   const html = `

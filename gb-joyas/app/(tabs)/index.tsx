@@ -111,7 +111,7 @@ export default function DashboardScreen() {
         </View>
       } />
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
-        {hoy.getMonth() === 4 && (
+        {hoy.getMonth() === 11 && (
         <TouchableOpacity
           style={styles.yearEndBanner}
           onPress={() => router.push('/(tabs)/finances')}
