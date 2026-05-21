@@ -56,7 +56,7 @@ export default function SalesScreen() {
 
   function abrirEditar(venta: Venta) {
     setVentaSeleccionada(venta);
-    setCanalEditando((venta as any).canal_venta_id || '');
+    setCanalEditando(venta.canal_venta_id || '');
     setMetodoEditando(venta.metodo_entrega);
     reset({ cliente_nombre: venta.cliente_nombre, notas: venta.notas || '', total_recibido: String(venta.total_recibido) });
     setModalEditar(true);
@@ -130,8 +130,8 @@ export default function SalesScreen() {
                   <Text style={styles.ventaDetalle} numberOfLines={1}>
                     {unidades} unidad{unidades !== 1 ? 'es' : ''} · {distintos} producto{distintos !== 1 ? 's' : ''} · {venta.metodo_entrega === 'correos_cr' ? 'Correos CR' : 'Retiro personal'} · {new Date(venta.fecha).toLocaleDateString('es-CR', { day: 'numeric', month: 'short' })}
                   </Text>
-                  {(venta as any).canal_venta?.nombre && (
-                    <View style={styles.canalBadge}><Text style={styles.canalText}>{(venta as any).canal_venta.nombre}</Text></View>
+                  {venta.canal_venta?.nombre && (
+                    <View style={styles.canalBadge}><Text style={styles.canalText}>{venta.canal_venta?.nombre}</Text></View>
                   )}
                   {venta.notas ? <Text style={styles.ventaNota} numberOfLines={1}>💬 {venta.notas}</Text> : null}
                 </View>

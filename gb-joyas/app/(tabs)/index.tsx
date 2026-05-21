@@ -148,9 +148,9 @@ export default function DashboardScreen() {
               <Text style={styles.ventaDetalle} numberOfLines={1}>
                 {venta.metodo_entrega === 'correos_cr' ? 'Correos CR' : 'Retiro personal'}
               </Text>
-              {(venta as any).canal_venta?.nombre && (
+              {venta.canal_venta?.nombre && (
                 <View style={styles.canalBadge}>
-                  <Text style={styles.canalBadgeText}>{(venta as any).canal_venta.nombre}</Text>
+                  <Text style={styles.canalBadgeText}>{venta.canal_venta?.nombre}</Text>
                 </View>
               )}
             </View>

@@ -38,6 +38,7 @@ export interface Venta {
   id: string;
   fecha: string;
   cliente_nombre: string;
+  canal_venta_id?: string;
   notas?: string;
   total_productos: number;
   costo_envio_cobrado: number;
@@ -45,6 +46,7 @@ export interface Venta {
   total_recibido: number;
   metodo_entrega: 'correos_cr' | 'retiro_personal';
   created_at: string;
+  canal_venta?: { id: string; nombre: string; activo: boolean };
   productos?: VentaProducto[];
 }
 
