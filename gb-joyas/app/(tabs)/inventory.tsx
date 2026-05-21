@@ -48,8 +48,8 @@ export default function InventoryScreen() {
     } finally { setLoading(false); }
   }, [mostrarArchivados]);
 
-  useFocusEffect(cargar);
-
+  useFocusEffect(useCallback(() => { cargar(); }, [cargar]));
+  
   React.useEffect(() => {
     if (filter === 'stock_bajo') setStockBajoFilter(true);
   }, [filter]);

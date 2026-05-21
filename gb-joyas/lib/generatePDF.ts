@@ -7,6 +7,7 @@ interface PDFData {
   topProductos: { nombre: string; cantidad: number; total: number }[];
   mes: Date;
   tipo: 'mensual' | 'anual';
+  resumenPorMes?: ResumenMes[];
 }
 
 function fmt(n: number): string {
@@ -15,7 +16,9 @@ function fmt(n: number): string {
 
 export async function generarPDFMensual(data: PDFData) {
   const meses = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
-  const periodoLabel = `${meses[data.mes.getMonth()]} ${data.mes.getFullYear()}`;
+  const periodoLabel = data.tipo === 'anual'
+    ? `Año ${data.mes.getFullYear()}`
+    : `${meses[data.mes.getMonth()]} ${data.mes.getFullYear()}`;
   const hoy = new Date().toLocaleDateString('es-CR', { day: 'numeric', month: 'long', year: 'numeric' });
 
   const html = `
@@ -73,7 +76,7 @@ export async function generarPDFMensual(data: PDFData) {
       <img src="https://iclattarpoxewfwizukk.supabase.co/storage/v1/object/public/assets/Vertical.png" style="height:70px; width:auto;" />
     </div>
     <div>
-      <div class="report-tipo">REPORTE MENSUAL</div>
+      <div class="report-tipo">${data.tipo === 'anual' ? 'REPORTE ANUAL' : 'REPORTE MENSUAL'}</div>
       <div class="report-periodo">${periodoLabel}</div>
       <div class="report-fecha">Generado el ${hoy}</div>
     </div>
@@ -137,6 +140,28 @@ export async function generarPDFMensual(data: PDFData) {
     <div class="inventario-label">Valor del inventario a precio de costo</div>
     <div class="inventario-value">${fmt(data.resumen.valor_inventario)}</div>
   </div>
+
+${data.tipo === 'anual' && data.resumenPorMes ? `
+  <div class="section-wrap">
+    <div class="section-title">Resumen por mes</div>
+    <table>
+      <tr>
+        <th>Mes</th>
+        <th style="text-align:right">Ingresos</th>
+        <th style="text-align:right">Gastos</th>
+        <th style="text-align:right">Ganancia</th>
+      </tr>
+      ${data.resumenPorMes.map((r, i) => `
+      <tr>
+        <td>${meses[i]}</td>
+        <td>${fmt(r.ingresos_ventas)}</td>
+        <td>${fmt(r.total_gastos)}</td>
+        <td style="color:${r.ganancia >= 0 ? '#622632' : '#C0392B'}">${fmt(r.ganancia)}</td>
+      </tr>
+      `).join('')}
+    </table>
+  </div>
+  ` : ''}
 
   <div class="footer">
     <span>Golden Bay Jewelry · Reporte generado automáticamente</span>

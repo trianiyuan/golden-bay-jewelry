@@ -56,38 +56,104 @@ export default function FinancesScreen() {
 
   async function descargarPDF() {
   if (!resumen) return;
+  console.log('tipoPDF:', tipoPDF);
   try {
     setGenerando(true);
-    const ventas = await getVentas(mes);
 
-    const canalMap: Record<string, number> = {};
-    ventas.forEach(v => {
-      const nombre = (v as any).canal_venta?.nombre || 'Otros';
-      canalMap[nombre] = (canalMap[nombre] || 0) + Number(v.total_cobrado);
-    });
-    const ventasPorCanal = Object.entries(canalMap)
-      .map(([nombre, total]) => ({ nombre, total }))
-      .sort((a, b) => b.total - a.total);
+    if (tipoPDF === 'anual') {
+      const año = mes.getFullYear();
+      const mesesAnuales = Array.from({ length: 12 }, (_, i) => i);
+      const resumenesAnuales = await Promise.all(
+        mesesAnuales.map(m => getResumenMes(año, m))
+      );
+      const resumenAnual: typeof resumen = {
+        mes: String(año),
+        total_ventas: resumenesAnuales.reduce((s, r) => s + r.total_ventas, 0),
+        ingresos_ventas: resumenesAnuales.reduce((s, r) => s + r.ingresos_ventas, 0),
+        cogs: resumenesAnuales.reduce((s, r) => s + r.cogs, 0),
+        ganancia_bruta: resumenesAnuales.reduce((s, r) => s + r.ganancia_bruta, 0),
+        total_gastos: resumenesAnuales.reduce((s, r) => s + r.total_gastos, 0),
+        ganancia: resumenesAnuales.reduce((s, r) => s + r.ganancia, 0),
+        valor_inventario: resumen.valor_inventario,
+      };
 
-    const productoMap: Record<string, { nombre: string; cantidad: number; total: number }> = {};
-    ventas.forEach(v => {
-      (v.productos || []).forEach((vp: any) => {
-        const nombre = vp.producto?.nombre || 'Producto';
-        if (!productoMap[nombre]) productoMap[nombre] = { nombre, cantidad: 0, total: 0 };
-        productoMap[nombre].cantidad += vp.cantidad;
-        productoMap[nombre].total += vp.precio_unitario * vp.cantidad;
+      const ventasAnuales = await getVentas();
+      const ventasAño = ventasAnuales.filter(v =>
+        new Date(v.fecha).getFullYear() === año
+      );
+
+      const canalMap: Record<string, number> = {};
+      ventasAño.forEach(v => {
+        const nombre = v.canal_venta?.nombre || 'Otros';
+        canalMap[nombre] = (canalMap[nombre] || 0) + Number(v.total_cobrado);
       });
-    });
-    const topProductos = Object.values(productoMap).sort((a, b) => b.total - a.total);
+      const ventasPorCanal = Object.entries(canalMap)
+        .map(([nombre, total]) => ({ nombre, total }))
+        .sort((a, b) => b.total - a.total);
 
-    await generarPDFMensual({
-      resumen,
-      gastosPorCategoria: gastosCat,
-      ventasPorCanal,
-      topProductos,
-      mes,
-      tipo: tipoPDF,
-    });
+      const productoMap: Record<string, { nombre: string; cantidad: number; total: number }> = {};
+      ventasAño.forEach(v => {
+        (v.productos || []).forEach((vp: any) => {
+          const nombre = vp.producto?.nombre || 'Producto';
+          if (!productoMap[nombre]) productoMap[nombre] = { nombre, cantidad: 0, total: 0 };
+          productoMap[nombre].cantidad += vp.cantidad;
+          productoMap[nombre].total += vp.precio_unitario * vp.cantidad;
+        });
+      });
+      const topProductos = Object.values(productoMap).sort((a, b) => b.total - a.total);
+
+      const gastosCatAnual: Record<string, number> = {};
+      resumenesAnuales.forEach((_, i) => {});
+      const gastosCatAnualData = await Promise.all(
+        mesesAnuales.map(m => getGastosPorCategoria(año, m))
+      );
+      gastosCatAnualData.flat().forEach(g => {
+        gastosCatAnual[g.nombre] = (gastosCatAnual[g.nombre] || 0) + g.total;
+      });
+      const gastosPorCategoriaAnual = Object.entries(gastosCatAnual)
+        .map(([nombre, total]) => ({ nombre, total }))
+        .sort((a, b) => b.total - a.total);
+
+      await generarPDFMensual({
+        resumen: resumenAnual,
+        gastosPorCategoria: gastosPorCategoriaAnual,
+        ventasPorCanal,
+        topProductos,
+        mes: new Date(año, 0, 1),
+        tipo: 'anual',
+        resumenPorMes: resumenesAnuales,
+      });
+    } else {
+      const ventas = await getVentas(mes);
+      const canalMap: Record<string, number> = {};
+      ventas.forEach(v => {
+        const nombre = v.canal_venta?.nombre || 'Otros';
+        canalMap[nombre] = (canalMap[nombre] || 0) + Number(v.total_cobrado);
+      });
+      const ventasPorCanal = Object.entries(canalMap)
+        .map(([nombre, total]) => ({ nombre, total }))
+        .sort((a, b) => b.total - a.total);
+
+      const productoMap: Record<string, { nombre: string; cantidad: number; total: number }> = {};
+      ventas.forEach(v => {
+        (v.productos || []).forEach((vp: any) => {
+          const nombre = vp.producto?.nombre || 'Producto';
+          if (!productoMap[nombre]) productoMap[nombre] = { nombre, cantidad: 0, total: 0 };
+          productoMap[nombre].cantidad += vp.cantidad;
+          productoMap[nombre].total += vp.precio_unitario * vp.cantidad;
+        });
+      });
+      const topProductos = Object.values(productoMap).sort((a, b) => b.total - a.total);
+
+      await generarPDFMensual({
+        resumen,
+        gastosPorCategoria: gastosCat,
+        ventasPorCanal,
+        topProductos,
+        mes,
+        tipo: 'mensual',
+      });
+    }
   } catch (e: any) {
     console.error('Error generando PDF:', e);
   } finally {
