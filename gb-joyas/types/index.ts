@@ -26,6 +26,7 @@ export interface Producto {
   precio: number;
   precio_venta: number;
   precio_costo: number;
+  tipo_arete?: 'regular' | 'ear_cuff';
   imagen_url?: string;
   activo: boolean;
   created_at: string;

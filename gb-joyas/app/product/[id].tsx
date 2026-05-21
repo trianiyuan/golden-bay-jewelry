@@ -23,6 +23,10 @@ const COLORES = [
   { key: 'plateado', label: 'Plata', dot: '#C0C0C0' },
   { key: 'rose_gold', label: 'Oro Rosa', dot: '#ECABA0' },
 ];
+const TIPOS_ARETE = [
+  { key: 'regular', label: 'Regular' },
+  { key: 'ear_cuff', label: 'Ear Cuff' },
+];
 
 export default function ProductDetailScreen() {
   const router = useRouter();
@@ -44,6 +48,7 @@ export default function ProductDetailScreen() {
   const [editCat, setEditCat] = useState('');
   const [editTalla, setEditTalla] = useState('');
   const [editColor, setEditColor] = useState('dorado');
+  const [editTipoArete, setEditTipoArete] = useState<'regular' | 'ear_cuff' | null>(null);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => { cargar(); getCategorias().then(setCategorias); }, [id]);
@@ -52,17 +57,21 @@ export default function ProductDetailScreen() {
     if (editCat) getTallasPorCategoria(editCat).then(setTallas);
   }, [editCat]);
 
+  const categoriaActiva = categorias.find(c => c.id === editCat);
+  const esAretes = categoriaActiva?.nombre === 'Aretes';
+
   async function cargar() {
     try {
       const p = await getProductoById(id);
       setProducto(p);
       setEditNombre(p.nombre);
       setEditPrecioVenta(String(p.precio_venta || (p as any).precio || ''));
-      setEditPrecioCosto(String((p as any).precio_costo || ''));
+      setEditPrecioCosto(String(p.precio_costo || ''));
       setEditDescripcion(p.descripcion || '');
       setEditCat(p.categoria_id);
       setEditTalla(p.talla_id);
       setEditColor(p.color);
+      setEditTipoArete(p.tipo_arete || null);
       const { data } = await supabase
         .from('movimientos_inventario')
         .select('*')
@@ -78,7 +87,7 @@ export default function ProductDetailScreen() {
   async function cambiarStock(delta: number) {
     if (!producto) return;
     if (producto.cantidad + delta < 0) {
-      Alert.alert('Aviso','No se puede reducir el stock por debajo de 0.');
+      Alert.alert('Aviso', 'No se puede reducir el stock por debajo de 0.');
       return;
     }
     try {
@@ -87,7 +96,7 @@ export default function ProductDetailScreen() {
       setProducto(prev => prev ? { ...prev, cantidad: prev.cantidad + delta } : prev);
       await cargar();
     } catch (e: any) {
-      Alert.alert('Aviso',e.message || 'Error al ajustar stock.');
+      Alert.alert('Aviso', e.message || 'Error al ajustar stock.');
     } finally {
       setAjustando(false);
     }
@@ -114,6 +123,10 @@ export default function ProductDetailScreen() {
       Alert.alert('Campos obligatorios', 'Por favor completá todos los campos obligatorios.');
       return;
     }
+    if (esAretes && !editTipoArete) {
+      Alert.alert('Campo requerido', 'Seleccioná el tipo de arete.');
+      return;
+    }
     try {
       setSaving(true);
       await updateProducto(producto.id, {
@@ -124,6 +137,7 @@ export default function ProductDetailScreen() {
         categoria_id: editCat,
         talla_id: editTalla,
         color: editColor,
+        tipo_arete: esAretes ? editTipoArete ?? undefined : undefined,
       } as any);
       await cargar();
       setEditMode(false);
@@ -183,7 +197,6 @@ export default function ProductDetailScreen() {
   if (!producto) return null;
   const stockBajo = producto.cantidad < 3;
 
-  // MODO EDICIÓN
   if (editMode) {
     return (
       <SafeAreaView style={styles.safe}>
@@ -216,7 +229,7 @@ export default function ProductDetailScreen() {
             {categorias.map(cat => (
               <TouchableOpacity key={cat.id}
                 style={[styles.chip, editCat === cat.id && styles.chipActive]}
-                onPress={() => setEditCat(cat.id)}>
+                onPress={() => { setEditCat(cat.id); setEditTipoArete(null); }}>
                 <Text style={[styles.chipText, editCat === cat.id && styles.chipTextActive]}>{cat.nombre}</Text>
               </TouchableOpacity>
             ))}
@@ -231,6 +244,21 @@ export default function ProductDetailScreen() {
                     style={[styles.tallaChip, editTalla === t.id && styles.tallaChipActive]}
                     onPress={() => setEditTalla(t.id)}>
                     <Text style={[styles.tallaText, editTalla === t.id && styles.tallaTextActive]}>{t.valor}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </>
+          )}
+
+          {esAretes && (
+            <>
+              <Text style={styles.fieldLabel}>TIPO DE ARETE *</Text>
+              <View style={styles.chipsRow}>
+                {TIPOS_ARETE.map(t => (
+                  <TouchableOpacity key={t.key}
+                    style={[styles.chip, editTipoArete === t.key && styles.chipActive]}
+                    onPress={() => setEditTipoArete(t.key as 'regular' | 'ear_cuff')}>
+                    <Text style={[styles.chipText, editTipoArete === t.key && styles.chipTextActive]}>{t.label}</Text>
                   </TouchableOpacity>
                 ))}
               </View>
@@ -259,9 +287,7 @@ export default function ProductDetailScreen() {
           <View style={styles.confirmOverlay}>
             <View style={styles.confirmBox}>
               <Text style={styles.confirmTitulo}>Eliminar producto</Text>
-              <Text style={styles.confirmMensaje}>
-                ¿Eliminás "{producto?.nombre}"? Esta acción no se puede deshacer.
-              </Text>
+              <Text style={styles.confirmMensaje}>¿Eliminás "{producto?.nombre}"? Esta acción no se puede deshacer.</Text>
               <View style={styles.confirmBtns}>
                 <TouchableOpacity style={styles.confirmCancelar} onPress={() => setModalEliminar(false)}>
                   <Text style={styles.confirmCancelarText}>Cancelar</Text>
@@ -278,9 +304,7 @@ export default function ProductDetailScreen() {
           <View style={styles.confirmOverlay}>
             <View style={styles.confirmBox}>
               <Text style={styles.confirmTitulo}>Este producto tiene ventas</Text>
-              <Text style={styles.confirmMensaje}>
-                "{producto?.nombre}" tiene ventas registradas. Si lo eliminás, los totales de tus reportes no se verán afectados, pero el detalle de esas ventas perderá la referencia al producto.
-              </Text>
+              <Text style={styles.confirmMensaje}>"{producto?.nombre}" tiene ventas registradas. Si lo eliminás, los totales de tus reportes no se verán afectados, pero el detalle de esas ventas perderá la referencia al producto.</Text>
               <View style={styles.confirmBtns}>
                 <TouchableOpacity style={styles.confirmCancelar} onPress={() => setModalEliminarConVentas(false)}>
                   <Text style={styles.confirmCancelarText}>Cancelar</Text>
@@ -296,7 +320,6 @@ export default function ProductDetailScreen() {
     );
   }
 
-  // MODO VISTA
   return (
     <SafeAreaView style={styles.safe}>
       <Header showBack backLabel="‹ Volver" title={producto.nombre}
@@ -327,6 +350,11 @@ export default function ProductDetailScreen() {
             <View style={styles.categoriaBadge}>
               <Text style={styles.categoriaText}>{producto.categoria?.nombre}</Text>
             </View>
+            {producto.tipo_arete && (
+              <View style={[styles.categoriaBadge, { marginLeft: 4 }]}>
+                <Text style={styles.categoriaText}>{producto.tipo_arete === 'regular' ? 'Regular' : 'Ear Cuff'}</Text>
+              </View>
+            )}
           </View>
           {producto.descripcion ? <Text style={styles.descripcion}>{producto.descripcion}</Text> : null}
 
@@ -337,12 +365,12 @@ export default function ProductDetailScreen() {
             </View>
             <View style={styles.priceItem}>
               <Text style={styles.priceLabel}>PRECIO COSTO</Text>
-              <Text style={styles.priceValue}>₡{((producto as any).precio_costo || 0).toLocaleString('es-CR')}</Text>
+              <Text style={styles.priceValue}>₡{(producto.precio_costo || 0).toLocaleString('es-CR')}</Text>
             </View>
             <View style={styles.priceItem}>
               <Text style={styles.priceLabel}>MARGEN</Text>
               <Text style={[styles.priceValue, { color: COLORS.wine }]}>
-                ₡{((producto.precio_venta || (producto as any).precio || 0) - ((producto as any).precio_costo || 0)).toLocaleString('es-CR')}
+                ₡{((producto.precio_venta || (producto as any).precio || 0) - (producto.precio_costo || 0)).toLocaleString('es-CR')}
               </Text>
             </View>
           </View>
@@ -413,9 +441,7 @@ export default function ProductDetailScreen() {
         <View style={styles.confirmOverlay}>
           <View style={styles.confirmBox}>
             <Text style={styles.confirmTitulo}>Eliminar producto</Text>
-            <Text style={styles.confirmMensaje}>
-              ¿Eliminás "{producto?.nombre}"? Esta acción no se puede deshacer.
-            </Text>
+            <Text style={styles.confirmMensaje}>¿Eliminás "{producto?.nombre}"? Esta acción no se puede deshacer.</Text>
             <View style={styles.confirmBtns}>
               <TouchableOpacity style={styles.confirmCancelar} onPress={() => setModalEliminar(false)}>
                 <Text style={styles.confirmCancelarText}>Cancelar</Text>
@@ -432,9 +458,7 @@ export default function ProductDetailScreen() {
         <View style={styles.confirmOverlay}>
           <View style={styles.confirmBox}>
             <Text style={styles.confirmTitulo}>Este producto tiene ventas</Text>
-            <Text style={styles.confirmMensaje}>
-              "{producto?.nombre}" tiene ventas registradas. Si lo eliminás, los totales de tus reportes no se verán afectados, pero el detalle de esas ventas perderá la referencia al producto.
-            </Text>
+            <Text style={styles.confirmMensaje}>"{producto?.nombre}" tiene ventas registradas. Si lo eliminás, los totales de tus reportes no se verán afectados, pero el detalle de esas ventas perderá la referencia al producto.</Text>
             <View style={styles.confirmBtns}>
               <TouchableOpacity style={styles.confirmCancelar} onPress={() => setModalEliminarConVentas(false)}>
                 <Text style={styles.confirmCancelarText}>Cancelar</Text>
@@ -464,7 +488,7 @@ const styles = StyleSheet.create({
   imageOverlayText: { fontSize: 12, color: 'white', fontWeight: '500' },
   infoCard: { backgroundColor: COLORS.surface, borderRadius: SIZES.radiusLg, padding: 16, borderWidth: 1, borderColor: COLORS.border, marginBottom: 12 },
   productoNombre: { fontSize: 20, fontWeight: '600', color: COLORS.textPrimary, marginBottom: 8 },
-  metaRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 },
+  metaRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8, flexWrap: 'wrap' },
   colorDotLg: { width: 10, height: 10, borderRadius: 5, borderWidth: 1, borderColor: 'rgba(0,0,0,0.1)' },
   metaText: { fontSize: 13, color: COLORS.textMuted, flex: 1 },
   categoriaBadge: { backgroundColor: COLORS.surfaceAlt, borderRadius: SIZES.radiusFull, paddingHorizontal: 10, paddingVertical: 3, borderWidth: 1, borderColor: COLORS.border },

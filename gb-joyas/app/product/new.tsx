@@ -27,6 +27,11 @@ const COLORES = [
   { key: 'rose_gold', label: 'Oro Rosa', dot: '#ECABA0' },
 ];
 
+const TIPOS_ARETE = [
+  { key: 'regular', label: 'Regular' },
+  { key: 'ear_cuff', label: 'Ear Cuff' },
+];
+
 function RequiredLabel({ label }: { label: string }) {
   return (
     <Text style={styles.fieldLabel}>
@@ -42,6 +47,7 @@ export default function NewProductScreen() {
   const [catSeleccionada, setCatSeleccionada] = useState('');
   const [tallaSeleccionada, setTallaSeleccionada] = useState('');
   const [colorSeleccionado, setColorSeleccionado] = useState('dorado');
+  const [tipoAreteSeleccionado, setTipoAreteSeleccionado] = useState<'regular' | 'ear_cuff' | null>(null);
   const [imagenUri, setImagenUri] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [submitted, setSubmitted] = useState(false);
@@ -60,6 +66,9 @@ export default function NewProductScreen() {
     }
   }, [catSeleccionada]);
 
+  const categoriaActiva = categorias.find(c => c.id === catSeleccionada);
+  const esAretes = categoriaActiva?.nombre === 'Aretes';
+
   async function pickImage() {
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
@@ -71,6 +80,10 @@ export default function NewProductScreen() {
   async function onSubmit(data: FormData) {
     setSubmitted(true);
     if (!catSeleccionada || !tallaSeleccionada) return;
+    if (esAretes && !tipoAreteSeleccionado) {
+      Alert.alert('Campo requerido', 'Seleccioná el tipo de arete.');
+      return;
+    }
 
     try {
       setSaving(true);
@@ -84,7 +97,8 @@ export default function NewProductScreen() {
         talla_id: tallaSeleccionada,
         color: colorSeleccionado,
         activo: true,
-      });
+        tipo_arete: esAretes ? tipoAreteSeleccionado ?? undefined : undefined,
+      } as any);
 
       if (imagenUri) {
         const url = await uploadImagenProducto(producto.id, imagenUri);
@@ -109,7 +123,6 @@ export default function NewProductScreen() {
 
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
 
-        {/* Image + info lado a lado */}
         <View style={styles.topRow}>
           <TouchableOpacity style={styles.imagePicker} onPress={pickImage} activeOpacity={0.85}>
             {imagenUri ? (
@@ -161,16 +174,14 @@ export default function NewProductScreen() {
           </View>
         </View>
 
-        {/* Category */}
         <RequiredLabel label="Categoría" />
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 14 }}>
           <View style={styles.chipsRow}>
             {categorias.map(cat => (
               <TouchableOpacity
                 key={cat.id}
-                style={[styles.chip, catSeleccionada === cat.id && styles.chipActive,
-                  catError && styles.chipError]}
-                onPress={() => setCatSeleccionada(cat.id)}
+                style={[styles.chip, catSeleccionada === cat.id && styles.chipActive, catError && styles.chipError]}
+                onPress={() => { setCatSeleccionada(cat.id); setTipoAreteSeleccionado(null); }}
               >
                 <Text style={[styles.chipText, catSeleccionada === cat.id && styles.chipTextActive]}>
                   {cat.nombre}
@@ -181,7 +192,6 @@ export default function NewProductScreen() {
         </ScrollView>
         {catError && <Text style={styles.errorMsg}>Seleccioná una categoría</Text>}
 
-        {/* Size */}
         {tallas.length > 0 && (
           <>
             <RequiredLabel label="Talla" />
@@ -189,8 +199,7 @@ export default function NewProductScreen() {
               {tallas.map(t => (
                 <TouchableOpacity
                   key={t.id}
-                  style={[styles.tallaChip, tallaSeleccionada === t.id && styles.tallaChipActive,
-                    tallaError && styles.chipError]}
+                  style={[styles.tallaChip, tallaSeleccionada === t.id && styles.tallaChipActive, tallaError && styles.chipError]}
                   onPress={() => setTallaSeleccionada(t.id)}
                 >
                   <Text style={[styles.tallaText, tallaSeleccionada === t.id && styles.tallaTextActive]}>
@@ -203,7 +212,25 @@ export default function NewProductScreen() {
           </>
         )}
 
-        {/* Color */}
+        {esAretes && (
+          <>
+            <RequiredLabel label="Tipo de arete" />
+            <View style={[styles.chipsRow, { marginBottom: 14 }]}>
+              {TIPOS_ARETE.map(t => (
+                <TouchableOpacity
+                  key={t.key}
+                  style={[styles.chip, tipoAreteSeleccionado === t.key && styles.chipActive]}
+                  onPress={() => setTipoAreteSeleccionado(t.key as 'regular' | 'ear_cuff')}
+                >
+                  <Text style={[styles.chipText, tipoAreteSeleccionado === t.key && styles.chipTextActive]}>
+                    {t.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </>
+        )}
+
         <RequiredLabel label="Color" />
         <View style={[styles.chipsRow, { marginBottom: 14 }]}>
           {COLORES.map(c => (
@@ -220,7 +247,6 @@ export default function NewProductScreen() {
           ))}
         </View>
 
-        {/* Description */}
         <Controller
           control={control} name="descripcion"
           render={({ field: { onChange, value } }) => (
@@ -253,57 +279,28 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: COLORS.background },
   scroll: { flex: 1 },
   content: { padding: SIZES.lg },
-
   topRow: { flexDirection: 'row', gap: 16, marginBottom: 16 },
-  imagePicker: {
-    width: 120, height: 120, borderRadius: SIZES.radiusLg,
-    overflow: 'hidden', borderWidth: 1, borderColor: COLORS.border, flexShrink: 0,
-  },
+  imagePicker: { width: 120, height: 120, borderRadius: SIZES.radiusLg, overflow: 'hidden', borderWidth: 1, borderColor: COLORS.border, flexShrink: 0 },
   imagePreview: { width: '100%', height: '100%' },
-  imagePlaceholder: {
-    flex: 1, backgroundColor: COLORS.blush,
-    alignItems: 'center', justifyContent: 'center', gap: 4,
-  },
+  imagePlaceholder: { flex: 1, backgroundColor: COLORS.blush, alignItems: 'center', justifyContent: 'center', gap: 4 },
   imagePlaceholderIcon: { fontSize: 28 },
   imagePlaceholderText: { fontSize: 11, color: COLORS.textMuted, fontWeight: '500' },
   topInfo: { flex: 1 },
-
-  fieldLabel: {
-    fontSize: SIZES.textXs, fontWeight: '600', color: COLORS.textMuted,
-    letterSpacing: 0.7, marginBottom: 8, marginTop: 4,
-  },
+  fieldLabel: { fontSize: SIZES.textXs, fontWeight: '600', color: COLORS.textMuted, letterSpacing: 0.7, marginBottom: 8, marginTop: 4 },
   errorMsg: { fontSize: 11, color: COLORS.error, marginBottom: 8, marginTop: -4 },
-
   chipsRow: { flexDirection: 'row', gap: 8, flexWrap: 'wrap', marginBottom: 4 },
-  chip: {
-    flexDirection: 'row', alignItems: 'center', gap: 5,
-    paddingHorizontal: 14, paddingVertical: 7,
-    borderRadius: SIZES.radiusFull, borderWidth: 1, borderColor: COLORS.border,
-    backgroundColor: COLORS.surfaceAlt,
-  },
+  chip: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 14, paddingVertical: 7, borderRadius: SIZES.radiusFull, borderWidth: 1, borderColor: COLORS.border, backgroundColor: COLORS.surfaceAlt },
   chipActive: { backgroundColor: COLORS.wine, borderColor: COLORS.wine },
   chipError: { borderColor: COLORS.error },
   chipText: { fontSize: 12, fontWeight: '500', color: COLORS.textPrimary },
   chipTextActive: { color: COLORS.surface },
   colorDot: { width: 10, height: 10, borderRadius: 5, borderWidth: 1, borderColor: 'rgba(0,0,0,0.1)' },
-
   tallasGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 4 },
-  tallaChip: {
-    width: 52, height: 40, alignItems: 'center', justifyContent: 'center',
-    borderRadius: SIZES.radiusSm, borderWidth: 1, borderColor: COLORS.border,
-    backgroundColor: COLORS.surfaceAlt,
-  },
+  tallaChip: { width: 52, height: 40, alignItems: 'center', justifyContent: 'center', borderRadius: SIZES.radiusSm, borderWidth: 1, borderColor: COLORS.border, backgroundColor: COLORS.surfaceAlt },
   tallaChipActive: { backgroundColor: COLORS.wine, borderColor: COLORS.wine },
   tallaText: { fontSize: 13, fontWeight: '500', color: COLORS.textPrimary },
   tallaTextActive: { color: COLORS.surface },
-
-  footer: {
-    padding: 12, paddingHorizontal: SIZES.lg,
-    backgroundColor: COLORS.surface, borderTopWidth: 1, borderTopColor: COLORS.border,
-  },
-  saveBtn: {
-    backgroundColor: COLORS.wine, borderRadius: SIZES.radiusMd,
-    paddingVertical: 14, alignItems: 'center',
-  },
+  footer: { padding: 12, paddingHorizontal: SIZES.lg, backgroundColor: COLORS.surface, borderTopWidth: 1, borderTopColor: COLORS.border },
+  saveBtn: { backgroundColor: COLORS.wine, borderRadius: SIZES.radiusMd, paddingVertical: 14, alignItems: 'center' },
   saveBtnText: { color: COLORS.surface, fontSize: 15, fontWeight: '600' },
 });

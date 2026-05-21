@@ -6,6 +6,7 @@ export async function getProductos(filtros?: {
   categoria_id?: string;
   color?: string;
   stock_bajo?: boolean;
+  tipo_arete?: string;
   activo?: boolean;
 }) {
   let query = supabase
@@ -16,6 +17,7 @@ export async function getProductos(filtros?: {
   if (filtros?.categoria_id) query = query.eq('categoria_id', filtros.categoria_id);
   if (filtros?.color) query = query.eq('color', filtros.color);
   if (filtros?.stock_bajo) query = query.lt('cantidad', 3);
+  if (filtros?.tipo_arete) query = query.eq('tipo_arete', filtros.tipo_arete);
   if (filtros?.activo !== undefined) query = query.eq('activo', filtros.activo);
   else query = query.eq('activo', true);
 

@@ -58,6 +58,7 @@ export default function InventoryScreen() {
     if (busqueda && !p.nombre.toLowerCase().includes(busqueda.toLowerCase())) return false;
     if (catActiva !== 'todos' && p.categoria_id !== catActiva) return false;
     if (colorActivo !== 'todos' && p.color !== colorActivo) return false;
+    if (esAretes && tipoArete !== 'todos' && p.tipo_arete !== tipoArete) return false;
     return true;
   });
 
