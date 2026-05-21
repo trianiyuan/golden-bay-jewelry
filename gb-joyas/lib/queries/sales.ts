@@ -40,6 +40,7 @@ export async function registrarVenta(params: {
       notas: params.notas || null,
       metodo_entrega: params.metodo_entrega,
       costo_envio_cobrado: params.costo_envio,
+      total_cobrado: totalCobrado,
       total_recibido: params.total_recibido,
       canal_venta_id: params.canal_venta_id || null,
       fecha: new Date().toISOString(),

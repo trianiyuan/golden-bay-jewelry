@@ -78,7 +78,7 @@ export default function ProductDetailScreen() {
   async function cambiarStock(delta: number) {
     if (!producto) return;
     if (producto.cantidad + delta < 0) {
-      window.alert('No se puede reducir el stock por debajo de 0.');
+      Alert.alert('Aviso','No se puede reducir el stock por debajo de 0.');
       return;
     }
     try {
@@ -87,7 +87,7 @@ export default function ProductDetailScreen() {
       setProducto(prev => prev ? { ...prev, cantidad: prev.cantidad + delta } : prev);
       await cargar();
     } catch (e: any) {
-      window.alert(e.message || 'Error al ajustar stock.');
+      Alert.alert('Aviso',e.message || 'Error al ajustar stock.');
     } finally {
       setAjustando(false);
     }

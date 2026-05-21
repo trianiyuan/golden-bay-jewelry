@@ -55,14 +55,15 @@ export async function getResumenMes(año: number, mes: number): Promise<ResumenM
 }
 
 export async function getResumenUltimosMeses(cantMeses = 6) {
-  const resultados: ResumenMes[] = [];
   const hoy = new Date();
+  const meses = Array.from({ length: cantMeses }, (_, i) => {
+    const fecha = new Date(hoy.getFullYear(), hoy.getMonth() - (cantMeses - 1 - i), 1);
+    return { año: fecha.getFullYear(), mes: fecha.getMonth() };
+  });
 
-  for (let i = cantMeses - 1; i >= 0; i--) {
-    const fecha = new Date(hoy.getFullYear(), hoy.getMonth() - i, 1);
-    const resumen = await getResumenMes(fecha.getFullYear(), fecha.getMonth());
-    resultados.push(resumen);
-  }
+  const resultados = await Promise.all(
+    meses.map(({ año, mes }) => getResumenMes(año, mes))
+  );
 
   return resultados;
 }
