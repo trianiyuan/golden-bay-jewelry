@@ -111,6 +111,20 @@ export default function DashboardScreen() {
         </View>
       } />
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
+        {hoy.getMonth() === 4 && (
+        <TouchableOpacity
+          style={styles.yearEndBanner}
+          onPress={() => router.push('/(tabs)/finances')}
+          activeOpacity={0.85}
+        >
+          <Text style={styles.yearEndIcon}>📅</Text>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.yearEndTitle}>Año {hoy.getFullYear()} terminando</Text>
+            <Text style={styles.yearEndSub}>Descargá tu reporte anual antes de que se archive en enero.</Text>
+          </View>
+          <Text style={styles.yearEndArrow}>›</Text>
+        </TouchableOpacity>
+      )}
         <View style={styles.metricsGrid}>
           <View style={[styles.metricCard, styles.metricDefault]}>
             <Text style={styles.metricLabel}>PRODUCTOS</Text>
@@ -228,4 +242,9 @@ const styles = StyleSheet.create({
   fabPrimaryText: { color: COLORS.surface, fontSize: 13, fontWeight: '600' },
   fabSecondary: { flex: 1, backgroundColor: COLORS.surface, borderRadius: 12, paddingVertical: 13, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: 'rgba(98,38,50,0.2)' },
   fabSecondaryText: { color: COLORS.textPrimary, fontSize: 13, fontWeight: '600' },
+  yearEndBanner: { backgroundColor: '#FFF0EE', borderRadius: 14, padding: 14, borderWidth: 1.5, borderColor: '#622632', marginBottom: 12, flexDirection: 'row', alignItems: 'center', gap: 10 },
+  yearEndIcon: { fontSize: 24 },
+  yearEndTitle: { fontSize: 13, fontWeight: '600', color: '#622632', marginBottom: 2 },
+  yearEndSub: { fontSize: 11, color: '#8F5C52', lineHeight: 16 },
+  yearEndArrow: { fontSize: 20, color: '#622632', fontWeight: '600' },
 });
