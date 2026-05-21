@@ -161,6 +161,22 @@ export async function generarPDFMensual(data: PDFData) {
     </div>
   </div>
 
+  ${data.topProductos.length > 5 ? `
+  <div class="section-wrap">
+    <div class="section-title">Productos con menor rotación</div>
+    <table>
+      <tr><th>Producto</th><th style="text-align:right">Uds vendidas</th><th style="text-align:right">Total</th></tr>
+      ${[...data.topProductos].reverse().slice(0, 5).map((p, i) => `
+      <tr>
+        <td>${i + 1}. ${p.nombre.slice(0, 28)}</td>
+        <td style="text-align:right;color:#1A0A0A">${p.cantidad}</td>
+        <td>${fmt(p.total)}</td>
+      </tr>
+      `).join('')}
+    </table>
+  </div>
+  ` : ''}
+
   <div class="inventario-card">
     <div class="inventario-label">Valor del inventario a precio de costo</div>
     <div class="inventario-value">${fmt(data.resumen.valor_inventario)}</div>
