@@ -2,13 +2,13 @@
 import React, { useState, useCallback } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity,
-  TextInput, StyleSheet, SafeAreaView, useWindowDimensions,
+  TextInput, StyleSheet, SafeAreaView, useWindowDimensions, Alert,
 } from 'react-native';
 import { useRouter, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { COLORS, SIZES } from '../../constants/colors';
 import { PageHeader } from '../../components/ui/Header';
 import { ProductCard } from '../../components/inventory/ProductCard';
-import { getCategorias, getProductos } from '../../lib/queries/products';
+import { getCategorias, getProductos, updateProducto } from '../../lib/queries/products';
 import { Producto, Categoria } from '../../types';
 
 const COLORES = [
@@ -30,6 +30,7 @@ export default function InventoryScreen() {
   const [colorActivo, setColorActivo] = useState('todos');
   const [tipoArete, setTipoArete] = useState('todos');
   const [stockBajoFilter, setStockBajoFilter] = useState(filter === 'stock_bajo');
+  const [mostrarArchivados, setMostrarArchivados] = useState(false);
   const [loading, setLoading] = useState(true);
 
   const numColumns = width > 900 ? 4 : width > 600 ? 3 : 2;
@@ -38,17 +39,29 @@ export default function InventoryScreen() {
 
   const cargar = useCallback(async () => {
     try {
-      const [p, c] = await Promise.all([getProductos(), getCategorias()]);
+      const [p, c] = await Promise.all([
+        getProductos({ activo: mostrarArchivados ? false : true }),
+        getCategorias(),
+      ]);
       setProductos(p);
       setCategorias(c);
     } finally { setLoading(false); }
-  }, []);
+  }, [mostrarArchivados]);
 
   useFocusEffect(cargar);
 
   React.useEffect(() => {
     if (filter === 'stock_bajo') setStockBajoFilter(true);
   }, [filter]);
+
+  async function reactivarProducto(id: string) {
+    try {
+      await updateProducto(id, { activo: true });
+      cargar();
+    } catch (e: any) {
+      Alert.alert('Error', e.message || 'No se pudo reactivar el producto.');
+    }
+  }
 
   const categoriaActiva = categorias.find(c => c.id === catActiva);
   const esAretes = categoriaActiva?.nombre === 'Aretes';
@@ -73,17 +86,27 @@ export default function InventoryScreen() {
         }
       />
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
+
         {stockBajoFilter && (
           <TouchableOpacity style={styles.alertBanner} onPress={() => setStockBajoFilter(false)}>
             <Text style={styles.alertText}>⚠️ Mostrando productos con stock bajo — toca para limpiar</Text>
           </TouchableOpacity>
         )}
 
+        <TouchableOpacity
+          style={[styles.archivadosToggle, mostrarArchivados && styles.archivadosToggleActive]}
+          onPress={() => { setMostrarArchivados(prev => !prev); setStockBajoFilter(false); }}
+        >
+          <Text style={[styles.archivadosToggleText, mostrarArchivados && styles.archivadosToggleTextActive]}>
+            {mostrarArchivados ? '← Volver al inventario activo' : '📦 Ver productos archivados'}
+          </Text>
+        </TouchableOpacity>
+
         <View style={styles.searchBar}>
           <Text style={styles.searchIcon}>🔍</Text>
           <TextInput
             style={styles.searchInput}
-            placeholder="Buscar joyería..."
+            placeholder={mostrarArchivados ? 'Buscar archivados...' : 'Buscar joyería...'}
             placeholderTextColor={COLORS.textLight}
             value={busqueda}
             onChangeText={setBusqueda}
@@ -95,52 +118,64 @@ export default function InventoryScreen() {
           )}
         </View>
 
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipsScroll} contentContainerStyle={styles.chipsContent}>
-          <TouchableOpacity style={[styles.chip, catActiva === 'todos' && styles.chipActive]} onPress={() => setCatActiva('todos')}>
-            <Text style={[styles.chipText, catActiva === 'todos' && styles.chipTextActive]}>Todos</Text>
-          </TouchableOpacity>
-          {categorias.map(cat => (
-            <TouchableOpacity key={cat.id} style={[styles.chip, catActiva === cat.id && styles.chipActive]}
-              onPress={() => { setCatActiva(cat.id); setTipoArete('todos'); }}>
-              <Text style={[styles.chipText, catActiva === cat.id && styles.chipTextActive]}>{cat.nombre}</Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-
-        {esAretes && (
-          <View style={styles.subfilterRow}>
-            <Text style={styles.subfilterLabel}>TIPO:</Text>
-            {['todos', 'regular', 'ear_cuff'].map(tipo => (
-              <TouchableOpacity key={tipo} style={[styles.subchip, tipoArete === tipo && styles.subchipActive]} onPress={() => setTipoArete(tipo)}>
-                <Text style={styles.subchipText}>{tipo === 'todos' ? 'All' : tipo === 'regular' ? 'Regular' : 'Ear Cuff'}</Text>
+        {!mostrarArchivados && (
+          <>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipsScroll} contentContainerStyle={styles.chipsContent}>
+              <TouchableOpacity style={[styles.chip, catActiva === 'todos' && styles.chipActive]} onPress={() => setCatActiva('todos')}>
+                <Text style={[styles.chipText, catActiva === 'todos' && styles.chipTextActive]}>Todos</Text>
               </TouchableOpacity>
-            ))}
-          </View>
+              {categorias.map(cat => (
+                <TouchableOpacity key={cat.id} style={[styles.chip, catActiva === cat.id && styles.chipActive]}
+                  onPress={() => { setCatActiva(cat.id); setTipoArete('todos'); }}>
+                  <Text style={[styles.chipText, catActiva === cat.id && styles.chipTextActive]}>{cat.nombre}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+
+            {esAretes && (
+              <View style={styles.subfilterRow}>
+                <Text style={styles.subfilterLabel}>TIPO:</Text>
+                {['todos', 'regular', 'ear_cuff'].map(tipo => (
+                  <TouchableOpacity key={tipo} style={[styles.subchip, tipoArete === tipo && styles.subchipActive]} onPress={() => setTipoArete(tipo)}>
+                    <Text style={styles.subchipText}>{tipo === 'todos' ? 'All' : tipo === 'regular' ? 'Regular' : 'Ear Cuff'}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
+
+            <View style={[styles.subfilterRow, { marginBottom: 14 }]}>
+              <Text style={styles.subfilterLabel}>COLOR:</Text>
+              {COLORES.map(c => (
+                <TouchableOpacity key={c.key} style={[styles.subchip, colorActivo === c.key && styles.subchipActive]} onPress={() => setColorActivo(c.key)}>
+                  {c.dot && <View style={[styles.colorDot, { backgroundColor: c.dot }]} />}
+                  <Text style={styles.subchipText}>{c.label}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </>
         )}
 
-        <View style={[styles.subfilterRow, { marginBottom: 14 }]}>
-          <Text style={styles.subfilterLabel}>COLOR:</Text>
-          {COLORES.map(c => (
-            <TouchableOpacity key={c.key} style={[styles.subchip, colorActivo === c.key && styles.subchipActive]} onPress={() => setColorActivo(c.key)}>
-              {c.dot && <View style={[styles.colorDot, { backgroundColor: c.dot }]} />}
-              <Text style={styles.subchipText}>{c.label}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-
-        <Text style={styles.resultsCount}>{productosFiltrados.length} producto{productosFiltrados.length !== 1 ? 's' : ''}</Text>
+        <Text style={styles.resultsCount}>
+          {productosFiltrados.length} producto{productosFiltrados.length !== 1 ? 's' : ''}
+          {mostrarArchivados ? ' archivados' : ''}
+        </Text>
 
         <View style={styles.grid}>
           {productosFiltrados.map(p => (
             <View key={p.id} style={{ width: finalCardWidth }}>
-              <ProductCard producto={p} />
+              <ProductCard
+                producto={p}
+                onReactivar={mostrarArchivados ? reactivarProducto : undefined}
+              />
             </View>
           ))}
         </View>
 
         {productosFiltrados.length === 0 && !loading && (
           <View style={styles.empty}>
-            <Text style={styles.emptyText}>{stockBajoFilter ? '✓ Todo el stock en orden' : 'Sin productos con estos filtros'}</Text>
+            <Text style={styles.emptyText}>
+              {mostrarArchivados ? '📦 Sin productos archivados' : stockBajoFilter ? '✓ Todo el stock en orden' : 'Sin productos con estos filtros'}
+            </Text>
           </View>
         )}
       </ScrollView>
@@ -156,6 +191,10 @@ const styles = StyleSheet.create({
   content: { padding: SIZES.lg },
   alertBanner: { backgroundColor: '#FFF0EE', borderRadius: 12, padding: 10, marginBottom: 12, borderWidth: 1, borderColor: '#E8A090' },
   alertText: { fontSize: 12, color: COLORS.wine, fontWeight: '500', textAlign: 'center' },
+  archivadosToggle: { backgroundColor: 'white', borderRadius: 10, borderWidth: 1, borderColor: 'rgba(232,200,184,0.6)', padding: 10, marginBottom: 12, alignItems: 'center' },
+  archivadosToggleActive: { backgroundColor: '#FFF0EE', borderColor: COLORS.wine },
+  archivadosToggleText: { fontSize: 12, color: COLORS.textMuted, fontWeight: '500' },
+  archivadosToggleTextActive: { color: COLORS.wine },
   searchBar: { backgroundColor: 'white', borderRadius: 12, borderWidth: 1, borderColor: 'rgba(232,200,184,0.6)', padding: 10, flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12, shadowColor: '#622632', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.04, shadowRadius: 8 },
   searchIcon: { fontSize: 14 },
   searchInput: { flex: 1, fontSize: 13, color: COLORS.textPrimary, padding: 0 },

@@ -38,6 +38,7 @@ export default function ProductDetailScreen() {
   const [editMode, setEditMode] = useState(false);
   const [modalEliminar, setModalEliminar] = useState(false);
   const [modalEliminarConVentas, setModalEliminarConVentas] = useState(false);
+  const [modalArchivar, setModalArchivar] = useState(false);
 
   const [categorias, setCategorias] = useState<Categoria[]>([]);
   const [tallas, setTallas] = useState<TallaPorCategoria[]>([]);
@@ -172,6 +173,17 @@ export default function ProductDetailScreen() {
     }
   }
 
+  async function ejecutarArchivar() {
+    try {
+      await updateProducto(producto!.id, { activo: false });
+      setModalArchivar(false);
+      router.replace('/(tabs)/inventory');
+    } catch (e: any) {
+      setModalArchivar(false);
+      Alert.alert('Error', e.message || 'No se pudo archivar el producto.');
+    }
+  }
+
   async function ejecutarEliminarConVentas() {
     try {
       await supabase.from('movimientos_inventario').delete().eq('producto_id', producto!.id);
@@ -277,28 +289,48 @@ export default function ProductDetailScreen() {
             ))}
           </View>
 
-          <TouchableOpacity style={styles.archiveBtn} onPress={() => setModalEliminar(true)}>
-            <Text style={styles.archiveBtnText}>🗑 Eliminar producto</Text>
+          <TouchableOpacity style={styles.archiveBtn} onPress={() => setModalArchivar(true)}>
+            <Text style={styles.archiveBtnText}>📦 Archivar producto</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={[styles.archiveBtn, { marginTop: 8, borderColor: 'rgba(192,57,43,0.3)' }]} onPress={() => setModalEliminar(true)}>
+            <Text style={[styles.archiveBtnText, { color: COLORS.error }]}>🗑 Eliminar producto</Text>
           </TouchableOpacity>
           <View style={{ height: 20 }} />
         </ScrollView>
 
-        <Modal visible={modalEliminar} animationType="fade" transparent>
-          <View style={styles.confirmOverlay}>
-            <View style={styles.confirmBox}>
-              <Text style={styles.confirmTitulo}>Eliminar producto</Text>
-              <Text style={styles.confirmMensaje}>¿Eliminás "{producto?.nombre}"? Esta acción no se puede deshacer.</Text>
-              <View style={styles.confirmBtns}>
-                <TouchableOpacity style={styles.confirmCancelar} onPress={() => setModalEliminar(false)}>
-                  <Text style={styles.confirmCancelarText}>Cancelar</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.confirmEliminar} onPress={ejecutarEliminar}>
-                  <Text style={styles.confirmEliminarText}>Eliminar</Text>
-                </TouchableOpacity>
-              </View>
+        <Modal visible={modalArchivar} animationType="fade" transparent>
+        <View style={styles.confirmOverlay}>
+          <View style={styles.confirmBox}>
+            <Text style={styles.confirmTitulo}>Archivar producto</Text>
+            <Text style={styles.confirmMensaje}>"{producto?.nombre}" se ocultará del inventario pero sus ventas se mantendrán en los reportes.</Text>
+            <View style={styles.confirmBtns}>
+              <TouchableOpacity style={styles.confirmCancelar} onPress={() => setModalArchivar(false)}>
+                <Text style={styles.confirmCancelarText}>Cancelar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.confirmEliminar} onPress={ejecutarArchivar}>
+                <Text style={styles.confirmEliminarText}>Archivar</Text>
+              </TouchableOpacity>
             </View>
           </View>
-        </Modal>
+        </View>
+      </Modal>
+
+      <Modal visible={modalEliminar} animationType="fade" transparent>
+        <View style={styles.confirmOverlay}>
+          <View style={styles.confirmBox}>
+            <Text style={styles.confirmTitulo}>Eliminar producto</Text>
+            <Text style={styles.confirmMensaje}>¿Eliminás "{producto?.nombre}"? Esta acción no se puede deshacer.</Text>
+            <View style={styles.confirmBtns}>
+              <TouchableOpacity style={styles.confirmCancelar} onPress={() => setModalEliminar(false)}>
+                <Text style={styles.confirmCancelarText}>Cancelar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.confirmEliminar} onPress={ejecutarEliminar}>
+                <Text style={styles.confirmEliminarText}>Eliminar</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
 
         <Modal visible={modalEliminarConVentas} animationType="fade" transparent>
           <View style={styles.confirmOverlay}>
@@ -434,8 +466,31 @@ export default function ProductDetailScreen() {
             ))}
           </>
         )}
+        <TouchableOpacity style={styles.archiveBtn} onPress={() => setModalArchivar(true)}>
+          <Text style={styles.archiveBtnText}>📦 Archivar producto</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={[styles.archiveBtn, { marginTop: 8, borderColor: 'rgba(192,57,43,0.3)' }]} onPress={() => setModalEliminar(true)}>
+          <Text style={[styles.archiveBtnText, { color: COLORS.error }]}>🗑 Eliminar producto</Text>
+        </TouchableOpacity>
         <View style={{ height: 20 }} />
       </ScrollView>
+
+      <Modal visible={modalArchivar} animationType="fade" transparent>
+        <View style={styles.confirmOverlay}>
+          <View style={styles.confirmBox}>
+            <Text style={styles.confirmTitulo}>Archivar producto</Text>
+            <Text style={styles.confirmMensaje}>"{producto?.nombre}" se ocultará del inventario pero sus ventas se mantendrán en los reportes.</Text>
+            <View style={styles.confirmBtns}>
+              <TouchableOpacity style={styles.confirmCancelar} onPress={() => setModalArchivar(false)}>
+                <Text style={styles.confirmCancelarText}>Cancelar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.confirmEliminar} onPress={ejecutarArchivar}>
+                <Text style={styles.confirmEliminarText}>Archivar</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
 
       <Modal visible={modalEliminar} animationType="fade" transparent>
         <View style={styles.confirmOverlay}>

@@ -12,15 +12,22 @@ const COLOR_LABELS: Record<string, string> = {
   dorado: 'Oro', plateado: 'Plata', rose_gold: 'Oro Rosa',
 };
 
-export function ProductCard({ producto }: { producto: Producto }) {
+export function ProductCard({
+  producto,
+  onReactivar,
+}: {
+  producto: Producto;
+  onReactivar?: (id: string) => void;
+}) {
   const router = useRouter();
   const stockBajo = producto.cantidad < 3;
+  const archivado = !producto.activo;
 
   return (
     <TouchableOpacity
-      style={styles.card}
-      onPress={() => router.push(`/product/${producto.id}`)}
-      activeOpacity={0.85}
+      style={[styles.card, archivado && styles.cardArchivado]}
+      onPress={() => !archivado && router.push(`/product/${producto.id}`)}
+      activeOpacity={archivado ? 1 : 0.85}
     >
       <View style={styles.imageContainer}>
         {producto.imagen_url ? (
@@ -30,7 +37,12 @@ export function ProductCard({ producto }: { producto: Producto }) {
             <Text style={styles.imagePlaceholderText}>💍</Text>
           </View>
         )}
-        {stockBajo && (
+        {archivado && (
+          <View style={styles.archivadoOverlay}>
+            <Text style={styles.archivadoOverlayText}>Archivado</Text>
+          </View>
+        )}
+        {!archivado && stockBajo && (
           <View style={styles.stockBadgeOverlay}>
             <Text style={styles.stockBadgeOverlayText}>Stock bajo</Text>
           </View>
@@ -45,16 +57,26 @@ export function ProductCard({ producto }: { producto: Producto }) {
             {COLOR_LABELS[producto.color]} · {producto.talla?.valor}
           </Text>
         </View>
-        <View style={styles.footer}>
-          <Text style={styles.precio}>
-            ₡{(producto.precio_venta || (producto as any).precio || 0).toLocaleString('es-CR')}
-          </Text>
-          <View style={[styles.stockBadge, stockBajo && styles.stockBadgeLow]}>
-            <Text style={[styles.stockText, stockBajo && styles.stockTextLow]}>
-              {producto.cantidad} {producto.categoria?.unidad === 'par' ? 'pr' : 'u'}
+        {archivado ? (
+          <TouchableOpacity
+            style={styles.reactivarBtn}
+            onPress={() => onReactivar?.(producto.id)}
+            activeOpacity={0.85}
+          >
+            <Text style={styles.reactivarText}>↩ Reactivar</Text>
+          </TouchableOpacity>
+        ) : (
+          <View style={styles.footer}>
+            <Text style={styles.precio}>
+              ₡{(producto.precio_venta || (producto as any).precio || 0).toLocaleString('es-CR')}
             </Text>
+            <View style={[styles.stockBadge, stockBajo && styles.stockBadgeLow]}>
+              <Text style={[styles.stockText, stockBajo && styles.stockTextLow]}>
+                {producto.cantidad} {producto.categoria?.unidad === 'par' ? 'pr' : 'u'}
+              </Text>
+            </View>
           </View>
-        </View>
+        )}
       </View>
     </TouchableOpacity>
   );
@@ -68,6 +90,11 @@ const styles = StyleSheet.create({
     borderColor: COLORS.border,
     overflow: 'hidden',
   },
+  cardArchivado: {
+    opacity: 0.7,
+    borderColor: 'rgba(232,200,184,0.4)',
+    borderStyle: 'dashed',
+  },
   imageContainer: {
     width: '100%',
     aspectRatio: 1,
@@ -80,6 +107,13 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
   },
   imagePlaceholderText: { fontSize: 28 },
+  archivadoOverlay: {
+    position: 'absolute', top: 6, right: 6,
+    backgroundColor: COLORS.textMuted,
+    borderRadius: SIZES.radiusFull,
+    paddingHorizontal: 6, paddingVertical: 2,
+  },
+  archivadoOverlayText: { fontSize: 9, color: COLORS.surface, fontWeight: '600' },
   stockBadgeOverlay: {
     position: 'absolute', top: 6, right: 6,
     backgroundColor: COLORS.wine,
@@ -87,7 +121,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 6, paddingVertical: 2,
   },
   stockBadgeOverlayText: { fontSize: 9, color: COLORS.surface, fontWeight: '600' },
-
   body: { padding: 8 },
   nombre: { fontSize: 11, fontWeight: '600', color: COLORS.textPrimary, marginBottom: 3 },
   meta: { flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 6 },
@@ -105,4 +138,10 @@ const styles = StyleSheet.create({
   stockBadgeLow: { backgroundColor: COLORS.wine },
   stockText: { fontSize: 9, color: COLORS.textPrimary },
   stockTextLow: { color: COLORS.surface },
+  reactivarBtn: {
+    backgroundColor: '#EAF3DE', borderRadius: SIZES.radiusSm,
+    paddingVertical: 5, paddingHorizontal: 8, alignItems: 'center',
+    borderWidth: 1, borderColor: '#C0DD97',
+  },
+  reactivarText: { fontSize: 11, color: '#3B6D11', fontWeight: '600' },
 });
