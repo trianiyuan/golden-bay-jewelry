@@ -120,13 +120,3 @@ export async function getTallasPorCategoria(categoriaId: string) {
   if (error) throw error;
   return data;
 }
-
-export async function getCanalesVenta() {
-  const { data, error } = await supabase
-    .from('canales_venta')
-    .select('*')
-    .eq('activo', true)
-    .order('nombre');
-  if (error) throw error;
-  return data;
-}

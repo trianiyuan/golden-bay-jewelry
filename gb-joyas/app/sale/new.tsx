@@ -6,7 +6,8 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useForm, Controller } from 'react-hook-form';
-import { getProductos, getCanalesVenta } from '../../lib/queries/products';
+import { getProductos } from '../../lib/queries/products';
+import { getCanalesVenta } from '../../lib/queries/sales';
 import { registrarVenta } from '../../lib/queries/sales';
 import { useCartStore } from '../../stores/cartStore';
 import { Producto } from '../../types';
