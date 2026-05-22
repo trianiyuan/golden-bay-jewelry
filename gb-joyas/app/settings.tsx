@@ -18,7 +18,6 @@ export default function SettingsScreen() {
   const [tallasPorCat, setTallasPorCat] = useState<Record<string, Item[]>>({});
   const [loading, setLoading] = useState(true);
 
-  // Modal state
   const [modal, setModal] = useState<{
     visible: boolean;
     tipo: 'categoria' | 'canal' | 'gasto' | 'talla';
@@ -27,9 +26,8 @@ export default function SettingsScreen() {
     parentNombre?: string;
   }>({ visible: false, tipo: 'categoria' });
   const [inputNombre, setInputNombre] = useState('');
+  const [inputComision, setInputComision] = useState('');
   const [saving, setSaving] = useState(false);
-
-  // Tallas expandidas
   const [expandedCat, setExpandedCat] = useState<string | null>(null);
 
   useEffect(() => { cargar(); }, []);
@@ -55,6 +53,7 @@ export default function SettingsScreen() {
 
   function abrirModal(tipo: typeof modal.tipo, item?: Item, parentId?: string, parentNombre?: string) {
     setInputNombre(item?.nombre || item?.valor || '');
+    setInputComision(tipo === 'canal' ? String(item?.comision_porcentaje || 0) : '');
     setModal({ visible: true, tipo, item, parentId, parentNombre });
   }
 
@@ -72,9 +71,9 @@ export default function SettingsScreen() {
         }
       } else if (tipo === 'canal') {
         if (item) {
-          await supabase.from('canales_venta').update({ nombre: inputNombre.trim() }).eq('id', item.id);
+          await supabase.from('canales_venta').update({ nombre: inputNombre.trim(), comision_porcentaje: parseFloat(inputComision) || 0 }).eq('id', item.id);
         } else {
-          await supabase.from('canales_venta').insert({ nombre: inputNombre.trim(), activo: true, es_editable: true });
+          await supabase.from('canales_venta').insert({ nombre: inputNombre.trim(), activo: true, es_editable: true, comision_porcentaje: parseFloat(inputComision) || 0 });
         }
       } else if (tipo === 'gasto') {
         if (item) {
@@ -137,7 +136,6 @@ export default function SettingsScreen() {
       <Header showBack title="Configuración" />
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
 
-        {/* CATEGORÍAS */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>CATEGORÍAS</Text>
@@ -172,7 +170,7 @@ export default function SettingsScreen() {
                   <View style={styles.tallasHeader}>
                     <Text style={styles.tallasTitle}>Tallas de {cat.nombre}</Text>
                     <TouchableOpacity style={styles.addBtn} onPress={() => abrirModal('talla', undefined, cat.id, cat.nombre)}>
-                         <Text style={styles.addBtnText}>+ Talla</Text>
+                      <Text style={styles.addBtnText}>+ Talla</Text>
                     </TouchableOpacity>
                   </View>
                   {(tallasPorCat[cat.id] || []).map(t => (
@@ -192,7 +190,6 @@ export default function SettingsScreen() {
           ))}
         </View>
 
-        {/* CANALES DE VENTA */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>CANALES DE VENTA</Text>
@@ -202,10 +199,15 @@ export default function SettingsScreen() {
           </View>
           {canales.map(canal => (
             <View key={canal.id} style={styles.item}>
-              <Text style={[styles.itemNombre, !canal.activo && { color: COLORS.textMuted }]}>
-                {canal.nombre}
-                {!canal.activo && <Text style={styles.inactivo}> (inactivo)</Text>}
-              </Text>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.itemNombre, !canal.activo && { color: COLORS.textMuted }]}>
+                  {canal.nombre}
+                  {!canal.activo && <Text style={styles.inactivo}> (inactivo)</Text>}
+                </Text>
+                {canal.comision_porcentaje > 0 && (
+                  <Text style={styles.comisionBadge}>Comisión: {canal.comision_porcentaje}%</Text>
+                )}
+              </View>
               <View style={styles.itemActions}>
                 <TouchableOpacity onPress={() => toggleCanal(canal)} style={styles.toggleBtn}>
                   <Text style={[styles.toggleText, { color: canal.activo ? COLORS.textMuted : COLORS.wine }]}>
@@ -220,7 +222,6 @@ export default function SettingsScreen() {
           ))}
         </View>
 
-        {/* CATEGORÍAS DE GASTO */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>CATEGORÍAS DE GASTO</Text>
@@ -241,7 +242,6 @@ export default function SettingsScreen() {
         <View style={{ height: 40 }} />
       </ScrollView>
 
-      {/* MODAL EDITAR / AGREGAR */}
       <Modal visible={modal.visible} transparent animationType="fade">
         <View style={styles.modalOverlay}>
           <View style={styles.modalCard}>
@@ -260,6 +260,24 @@ export default function SettingsScreen() {
               placeholderTextColor={COLORS.textMuted}
               autoFocus
             />
+            {modal.tipo === 'canal' && (
+              <>
+                <Text style={{ fontSize: 12, color: COLORS.textMuted, marginBottom: 6, fontWeight: '500' }}>
+                  COMISIÓN DEL CANAL (%)
+                </Text>
+                <Text style={{ fontSize: 11, color: COLORS.textMuted, marginBottom: 8 }}>
+                  Si el canal cobra una comisión sobre la venta, ingresá el porcentaje. Dejá 0 si no aplica.
+                </Text>
+                <TextInput
+                  style={styles.modalInput}
+                  value={inputComision}
+                  onChangeText={setInputComision}
+                  placeholder="Ej: 30"
+                  placeholderTextColor={COLORS.textMuted}
+                  keyboardType="numeric"
+                />
+              </>
+            )}
             <TouchableOpacity style={styles.modalBtnPrimary} onPress={guardar} disabled={saving}>
               {saving
                 ? <ActivityIndicator color="#FFF1ED" size="small" />
@@ -300,6 +318,7 @@ const styles = StyleSheet.create({
   toggleBtn: { paddingHorizontal: 8, paddingVertical: 4 },
   toggleText: { fontSize: 12, fontWeight: '500' },
   inactivo: { fontSize: 12, color: COLORS.textMuted },
+  comisionBadge: { fontSize: 11, color: COLORS.wine, marginTop: 2 },
   tallasContainer: { backgroundColor: '#FFF8F5', padding: 12, borderBottomWidth: 1, borderBottomColor: COLORS.border },
   tallasHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
   tallasTitle: { fontSize: 12, fontWeight: '600', color: COLORS.textMuted },

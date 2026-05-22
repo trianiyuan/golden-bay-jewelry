@@ -27,11 +27,14 @@ export async function registrarVenta(params: {
   total_recibido: number;
   carrito: ItemCarrito[];
   canal_venta_id?: string;
+  comision_porcentaje?: number;
 }) {
   const totalProductos = params.carrito.reduce(
     (sum, item) => sum + (item.producto.precio_venta || (item.producto as any).precio || 0) * item.cantidad, 0
   );
-  const totalCobrado = totalProductos + params.costo_envio;
+  const subtotal = totalProductos + params.costo_envio;
+  const montoComision = params.comision_porcentaje ? Math.round(subtotal * (params.comision_porcentaje / 100)) : 0;
+  const totalCobrado = subtotal + montoComision;
 
   const { data: venta, error: ventaError } = await supabase
     .from('ventas')

@@ -7,8 +7,7 @@ import {
 import { useRouter } from 'expo-router';
 import { useForm, Controller } from 'react-hook-form';
 import { getProductos } from '../../lib/queries/products';
-import { getCanalesVenta } from '../../lib/queries/sales';
-import { registrarVenta } from '../../lib/queries/sales';
+import { getCanalesVenta, registrarVenta } from '../../lib/queries/sales';
 import { useCartStore } from '../../stores/cartStore';
 import { Producto } from '../../types';
 import { COLORS, SIZES } from '../../constants/colors';
@@ -33,6 +32,7 @@ export default function NewSaleScreen() {
   const [paso, setPaso] = useState<Paso>('productos');
   const [metodoEntrega, setMetodoEntrega] = useState<'correos_cr' | 'retiro_personal'>('correos_cr');
   const [canalSeleccionado, setCanalSeleccionado] = useState('');
+  const [comisionCanal, setComisionCanal] = useState(0);
   const [saving, setSaving] = useState(false);
   const [submitted, setSubmitted] = useState(false);
 
@@ -41,7 +41,9 @@ export default function NewSaleScreen() {
   });
 
   const costoEnvio = parseFloat(watch('costo_envio') || '0') || 0;
-  const totalFinal = total() + costoEnvio;
+  const subtotal = total() + costoEnvio;
+  const montoComision = comisionCanal > 0 ? Math.round(subtotal * (comisionCanal / 100)) : 0;
+  const totalFinal = subtotal + montoComision;
 
   useEffect(() => {
     getProductos().then(setProductos);
@@ -80,9 +82,9 @@ export default function NewSaleScreen() {
         total_recibido: parseFloat(data.total_recibido) || totalFinal,
         carrito,
         canal_venta_id: canalSeleccionado,
+        comision_porcentaje: comisionCanal || undefined,
       });
       limpiarCarrito();
-      // Fix redirect: dismissAll primero para cerrar el modal, luego navegar
       router.dismissAll();
       setTimeout(() => router.replace('/(tabs)/sales'), 50);
     } catch (e: any) {
@@ -206,10 +208,13 @@ export default function NewSaleScreen() {
                     canalSeleccionado === canal.id && styles.canalChipActive,
                     canalError && styles.canalChipError,
                   ]}
-                  onPress={() => setCanalSeleccionado(canal.id)}
+                  onPress={() => {
+                    setCanalSeleccionado(canal.id);
+                    setComisionCanal(canal.comision_porcentaje || 0);
+                  }}
                 >
                   <Text style={[styles.canalText, canalSeleccionado === canal.id && styles.canalTextActive]}>
-                    {canal.nombre}
+                    {canal.nombre}{canal.comision_porcentaje > 0 ? ` (${canal.comision_porcentaje}%)` : ''}
                   </Text>
                 </TouchableOpacity>
               ))}
@@ -278,6 +283,13 @@ export default function NewSaleScreen() {
                 <Text style={styles.resumenNombre}>Envío</Text>
                 <Text style={styles.resumenDetalle}></Text>
                 <Text style={styles.resumenMonto}>₡{costoEnvio.toLocaleString('es-CR')}</Text>
+              </View>
+            )}
+            {montoComision > 0 && (
+              <View style={styles.resumenItem}>
+                <Text style={styles.resumenNombre}>Comisión canal ({comisionCanal}%)</Text>
+                <Text style={styles.resumenDetalle}></Text>
+                <Text style={styles.resumenMonto}>₡{montoComision.toLocaleString('es-CR')}</Text>
               </View>
             )}
             <View style={styles.resumenTotal}>
