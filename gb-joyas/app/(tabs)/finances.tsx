@@ -118,6 +118,35 @@ export default function FinancesScreen() {
         .map(([nombre, total]) => ({ nombre, total }))
         .sort((a, b) => b.total - a.total);
 
+      // Calcular comisiones por canal para el año
+      const canalesData = await supabase.from('canales_venta').select('*');
+      const canalesList = canalesData.data || [];
+
+      const comisionesPorCanal: { nombre: string; porcentaje: number; monto: number }[] = [];
+      const costosFijosPorCanal: { nombre: string; monto: number }[] = [];
+
+      canalesList.forEach(canal => {
+        const ventasCanal = ventasAño.filter(v => v.canal_venta_id === canal.id);
+        const totalCanal = ventasCanal.reduce((s, v) => s + Number(v.total_cobrado), 0);
+        if (canal.comision_porcentaje > 0 && totalCanal > 0) {
+          comisionesPorCanal.push({
+            nombre: canal.nombre,
+            porcentaje: canal.comision_porcentaje,
+            monto: Math.round(totalCanal * (canal.comision_porcentaje / 100)),
+          });
+        }
+        if (canal.costo_fijo_mensual > 0) {
+          costosFijosPorCanal.push({
+            nombre: canal.nombre,
+            monto: canal.costo_fijo_mensual * 12,
+          });
+        }
+      });
+
+      const totalComisiones = comisionesPorCanal.reduce((s, c) => s + c.monto, 0);
+      const totalCostosFijos = costosFijosPorCanal.reduce((s, c) => s + c.monto, 0);
+      const ingresoNeto = resumenAnual.ingresos_ventas - totalComisiones - totalCostosFijos;
+
       await generarPDFMensual({
         resumen: resumenAnual,
         gastosPorCategoria: gastosPorCategoriaAnual,
@@ -126,6 +155,9 @@ export default function FinancesScreen() {
         mes: new Date(año, 0, 1),
         tipo: 'anual',
         resumenPorMes: resumenesAnuales,
+        comisionesPorCanal,
+        costosFijosPorCanal,
+        ingresoNeto,
       });
     } else {
       let ventasFiltradas;
@@ -162,6 +194,16 @@ export default function FinancesScreen() {
         ? new Date(fechaInicio)
         : mes;
 
+      // Calcular meses cubiertos para el costo fijo
+      let mesesCubiertos = 1;
+      if (usarRangoPersonalizado && fechaInicio && fechaFin) {
+        const inicio = new Date(fechaInicio);
+        const fin = new Date(fechaFin);
+        const diffMs = fin.getTime() - inicio.getTime();
+        const diffDias = diffMs / (1000 * 60 * 60 * 24);
+        mesesCubiertos = Math.max(1, Math.round(diffDias / 30));
+      }
+
       // Calcular comisiones por canal
       const canalesData = await supabase.from('canales_venta').select('*');
       const canalesList = canalesData.data || [];
@@ -182,7 +224,7 @@ export default function FinancesScreen() {
         if (canal.costo_fijo_mensual > 0) {
           costosFijosPorCanal.push({
             nombre: canal.nombre,
-            monto: canal.costo_fijo_mensual,
+            monto: canal.costo_fijo_mensual * mesesCubiertos,
           });
         }
       });
