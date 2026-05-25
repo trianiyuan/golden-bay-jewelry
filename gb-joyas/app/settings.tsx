@@ -26,7 +26,7 @@ export default function SettingsScreen() {
     parentNombre?: string;
   }>({ visible: false, tipo: 'categoria' });
   const [inputNombre, setInputNombre] = useState('');
-  const [inputComision, setInputComision] = useState('');
+  const [inputCostoFijo, setInputCostoFijo] = useState('');
   const [saving, setSaving] = useState(false);
   const [expandedCat, setExpandedCat] = useState<string | null>(null);
 
@@ -54,6 +54,7 @@ export default function SettingsScreen() {
   function abrirModal(tipo: typeof modal.tipo, item?: Item, parentId?: string, parentNombre?: string) {
     setInputNombre(item?.nombre || item?.valor || '');
     setInputComision(tipo === 'canal' ? String(item?.comision_porcentaje || 0) : '');
+    setInputCostoFijo(tipo === 'canal' ? String(item?.costo_fijo_mensual || 0) : '');
     setModal({ visible: true, tipo, item, parentId, parentNombre });
   }
 
@@ -71,9 +72,9 @@ export default function SettingsScreen() {
         }
       } else if (tipo === 'canal') {
         if (item) {
-          await supabase.from('canales_venta').update({ nombre: inputNombre.trim(), comision_porcentaje: parseFloat(inputComision) || 0 }).eq('id', item.id);
+          await supabase.from('canales_venta').update({ nombre: inputNombre.trim(), comision_porcentaje: parseFloat(inputComision) || 0, costo_fijo_mensual: parseFloat(inputCostoFijo) || 0 }).eq('id', item.id);
         } else {
-          await supabase.from('canales_venta').insert({ nombre: inputNombre.trim(), activo: true, es_editable: true, comision_porcentaje: parseFloat(inputComision) || 0 });
+          await supabase.from('canales_venta').insert({ nombre: inputNombre.trim(), activo: true, es_editable: true, comision_porcentaje: parseFloat(inputComision) || 0, costo_fijo_mensual: parseFloat(inputCostoFijo) || 0 });}
         }
       } else if (tipo === 'gasto') {
         if (item) {
