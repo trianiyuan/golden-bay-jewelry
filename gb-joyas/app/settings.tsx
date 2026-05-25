@@ -26,6 +26,7 @@ export default function SettingsScreen() {
     parentNombre?: string;
   }>({ visible: false, tipo: 'categoria' });
   const [inputNombre, setInputNombre] = useState('');
+  const [inputComision, setInputComision] = useState('');
   const [inputCostoFijo, setInputCostoFijo] = useState('');
   const [saving, setSaving] = useState(false);
   const [expandedCat, setExpandedCat] = useState<string | null>(null);
@@ -72,9 +73,19 @@ export default function SettingsScreen() {
         }
       } else if (tipo === 'canal') {
         if (item) {
-          await supabase.from('canales_venta').update({ nombre: inputNombre.trim(), comision_porcentaje: parseFloat(inputComision) || 0, costo_fijo_mensual: parseFloat(inputCostoFijo) || 0 }).eq('id', item.id);
+          await supabase.from('canales_venta').update({
+            nombre: inputNombre.trim(),
+            comision_porcentaje: parseFloat(inputComision) || 0,
+            costo_fijo_mensual: parseFloat(inputCostoFijo) || 0,
+          }).eq('id', item.id);
         } else {
-          await supabase.from('canales_venta').insert({ nombre: inputNombre.trim(), activo: true, es_editable: true, comision_porcentaje: parseFloat(inputComision) || 0, costo_fijo_mensual: parseFloat(inputCostoFijo) || 0 });}
+          await supabase.from('canales_venta').insert({
+            nombre: inputNombre.trim(),
+            activo: true,
+            es_editable: true,
+            comision_porcentaje: parseFloat(inputComision) || 0,
+            costo_fijo_mensual: parseFloat(inputCostoFijo) || 0,
+          });
         }
       } else if (tipo === 'gasto') {
         if (item) {
@@ -205,8 +216,12 @@ export default function SettingsScreen() {
                   {canal.nombre}
                   {!canal.activo && <Text style={styles.inactivo}> (inactivo)</Text>}
                 </Text>
-                {canal.comision_porcentaje > 0 && (
-                  <Text style={styles.comisionBadge}>Comisión: {canal.comision_porcentaje}%</Text>
+                {(canal.comision_porcentaje > 0 || canal.costo_fijo_mensual > 0) && (
+                  <Text style={styles.comisionBadge}>
+                    {canal.comision_porcentaje > 0 ? `Comisión: ${canal.comision_porcentaje}%` : ''}
+                    {canal.comision_porcentaje > 0 && canal.costo_fijo_mensual > 0 ? ' · ' : ''}
+                    {canal.costo_fijo_mensual > 0 ? `Fijo: ₡${Number(canal.costo_fijo_mensual).toLocaleString('es-CR')}/mes` : ''}
+                  </Text>
                 )}
               </View>
               <View style={styles.itemActions}>
@@ -263,17 +278,23 @@ export default function SettingsScreen() {
             />
             {modal.tipo === 'canal' && (
               <>
-                <Text style={{ fontSize: 12, color: COLORS.textMuted, marginBottom: 6, fontWeight: '500' }}>
-                  COMISIÓN DEL CANAL (%)
-                </Text>
-                <Text style={{ fontSize: 11, color: COLORS.textMuted, marginBottom: 8 }}>
-                  Si el canal cobra una comisión sobre la venta, ingresá el porcentaje. Dejá 0 si no aplica.
-                </Text>
+                <Text style={styles.fieldLabel}>COMISIÓN DEL CANAL (%)</Text>
+                <Text style={styles.fieldHint}>Si el canal cobra una comisión sobre la venta, ingresá el porcentaje. Dejá 0 si no aplica.</Text>
                 <TextInput
                   style={styles.modalInput}
                   value={inputComision}
                   onChangeText={setInputComision}
                   placeholder="Ej: 30"
+                  placeholderTextColor={COLORS.textMuted}
+                  keyboardType="numeric"
+                />
+                <Text style={styles.fieldLabel}>COSTO FIJO MENSUAL (₡)</Text>
+                <Text style={styles.fieldHint}>Si el canal cobra un monto fijo por mes (ej: alquiler de espacio), ingresalo aquí.</Text>
+                <TextInput
+                  style={styles.modalInput}
+                  value={inputCostoFijo}
+                  onChangeText={setInputCostoFijo}
+                  placeholder="Ej: 10000"
                   placeholderTextColor={COLORS.textMuted}
                   keyboardType="numeric"
                 />
@@ -326,6 +347,8 @@ const styles = StyleSheet.create({
   tallaItem: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 6, paddingHorizontal: 4, borderBottomWidth: 1, borderBottomColor: COLORS.border },
   tallaValor: { fontSize: 13, color: COLORS.textPrimary },
   emptyText: { fontSize: 12, color: COLORS.textMuted, fontStyle: 'italic', paddingVertical: 8 },
+  fieldLabel: { fontSize: 11, fontWeight: '600', color: COLORS.textMuted, marginBottom: 4, letterSpacing: 0.5 },
+  fieldHint: { fontSize: 11, color: COLORS.textMuted, marginBottom: 8, lineHeight: 16 },
   modalOverlay: { flex: 1, backgroundColor: 'rgba(26,10,10,0.45)', alignItems: 'center', justifyContent: 'center', padding: 32 },
   modalCard: { backgroundColor: '#FFF1ED', borderRadius: 20, padding: 24, width: '100%', maxWidth: 340, borderWidth: 1, borderColor: '#E8C8B8' },
   modalTitle: { fontSize: 16, fontWeight: '600', color: COLORS.textPrimary, marginBottom: 16 },

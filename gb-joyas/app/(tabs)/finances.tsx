@@ -11,6 +11,7 @@ import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { PageHeader } from '../../components/ui/Header';
 import { generarPDFMensual } from '../../lib/generatePDF';
+import { supabase } from '../../lib/supabase';
 
 
 export default function FinancesScreen() {
@@ -161,6 +162,35 @@ export default function FinancesScreen() {
         ? new Date(fechaInicio)
         : mes;
 
+      // Calcular comisiones por canal
+      const canalesData = await supabase.from('canales_venta').select('*');
+      const canalesList = canalesData.data || [];
+
+      const comisionesPorCanal: { nombre: string; porcentaje: number; monto: number }[] = [];
+      const costosFijosPorCanal: { nombre: string; monto: number }[] = [];
+
+      canalesList.forEach(canal => {
+        const ventasCanal = ventas.filter(v => v.canal_venta_id === canal.id);
+        const totalCanal = ventasCanal.reduce((s, v) => s + Number(v.total_cobrado), 0);
+        if (canal.comision_porcentaje > 0 && totalCanal > 0) {
+          comisionesPorCanal.push({
+            nombre: canal.nombre,
+            porcentaje: canal.comision_porcentaje,
+            monto: Math.round(totalCanal * (canal.comision_porcentaje / 100)),
+          });
+        }
+        if (canal.costo_fijo_mensual > 0) {
+          costosFijosPorCanal.push({
+            nombre: canal.nombre,
+            monto: canal.costo_fijo_mensual,
+          });
+        }
+      });
+
+      const totalComisiones = comisionesPorCanal.reduce((s, c) => s + c.monto, 0);
+      const totalCostosFijos = costosFijosPorCanal.reduce((s, c) => s + c.monto, 0);
+      const ingresoNeto = resumen.ingresos_ventas - totalComisiones - totalCostosFijos;
+
       await generarPDFMensual({
         resumen,
         gastosPorCategoria: gastosCat,
@@ -169,6 +199,9 @@ export default function FinancesScreen() {
         mes: mesPDF,
         tipo: 'mensual',
         rangoPersonalizado: usarRangoPersonalizado ? { inicio: fechaInicio, fin: fechaFin } : undefined,
+        comisionesPorCanal,
+        costosFijosPorCanal,
+        ingresoNeto,
       });
     }
   } catch (e: any) {

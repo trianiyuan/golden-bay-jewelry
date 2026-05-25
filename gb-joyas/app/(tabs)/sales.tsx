@@ -133,6 +133,12 @@ export default function SalesScreen() {
                   {venta.canal_venta?.nombre && (
                     <View style={styles.canalBadge}><Text style={styles.canalText}>{venta.canal_venta?.nombre}</Text></View>
                   )}
+                  {venta.canal_venta?.comision_porcentaje > 0 && (
+                    <View style={styles.comisionBadge}>
+                      <Text style={styles.comisionBadgeText}>
+                        Comisión: ₡{Math.round(Number(venta.total_cobrado) * (venta.canal_venta.comision_porcentaje / 100)).toLocaleString('es-CR')} ({venta.canal_venta.comision_porcentaje}%)                      </Text>
+                    </View>
+                  )}
                   {venta.notas ? <Text style={styles.ventaNota} numberOfLines={1}>💬 {venta.notas}</Text> : null}
                 </View>
                 <View style={styles.ventaMonto}>
@@ -350,4 +356,6 @@ const styles = StyleSheet.create({
   confirmCancelarText: { color: COLORS.textPrimary, fontWeight: '500', fontSize: 14 },
   confirmEliminar: { flex: 1, padding: 12, borderRadius: 12, backgroundColor: COLORS.wine, alignItems: 'center', shadowColor: '#622632', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.3, shadowRadius: 8 },
   confirmEliminarText: { color: COLORS.surface, fontWeight: '600', fontSize: 14 },
+  comisionBadge: { alignSelf: 'flex-start', marginTop: 4, backgroundColor: 'rgba(98,38,50,0.05)', borderRadius: 6, paddingHorizontal: 8, paddingVertical: 2, borderWidth: 1, borderColor: 'rgba(98,38,50,0.15)' },
+  comisionBadgeText: { fontSize: 10, color: '#8F4450', fontWeight: '500' },
 });

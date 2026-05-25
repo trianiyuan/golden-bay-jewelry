@@ -9,6 +9,9 @@ interface PDFData {
   tipo: 'mensual' | 'anual';
   resumenPorMes?: ResumenMes[];
   rangoPersonalizado?: { inicio: string; fin: string };
+  comisionesPorCanal?: { nombre: string; porcentaje: number; monto: number }[];
+  costosFijosPorCanal?: { nombre: string; monto: number }[];
+  ingresoNeto?: number;
 }
 
 function fmt(n: number): string {
@@ -35,8 +38,6 @@ export async function generarPDFMensual(data: PDFData) {
   body { background: white; width: 816px; min-height: 1056px; margin: 0 auto; padding: 40px 48px; color: #1A0A0A; font-size: 11px; }
 
   .header { border: 2px solid #622632; padding: 16px 20px; border-radius: 10px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
-  .brand-name { font-size: 22px; font-weight: 700; color: #622632; }
-  .brand-sub { font-size: 9px; color: #ECABA0; letter-spacing: 2px; margin-top: 2px; }
   .report-tipo { font-size: 9px; color: #ECABA0; font-weight: 600; letter-spacing: 1px; text-align: right; }
   .report-periodo { font-size: 16px; font-weight: 700; color: #622632; text-align: right; }
   .report-fecha { font-size: 9px; color: #8F5C52; text-align: right; margin-top: 2px; }
@@ -97,25 +98,13 @@ export async function generarPDFMensual(data: PDFData) {
     </div>
   </div>
 
-<div class="section-wrap">
+  <div class="section-wrap">
     <div class="section-title">KPIs financieros</div>
     <div class="cards">
-      <div class="card">
-        <div class="card-label">Margen bruto</div>
-        <div class="card-value">${data.resumen.ingresos_ventas > 0 ? Math.round((data.resumen.ganancia_bruta / data.resumen.ingresos_ventas) * 100) : 0}%</div>
-      </div>
-      <div class="card">
-        <div class="card-label">Margen neto</div>
-        <div class="card-value">${data.resumen.ingresos_ventas > 0 ? Math.round((data.resumen.ganancia / data.resumen.ingresos_ventas) * 100) : 0}%</div>
-      </div>
-      <div class="card">
-        <div class="card-label">Ticket promedio</div>
-        <div class="card-value">${data.resumen.total_ventas > 0 ? fmt(data.resumen.ingresos_ventas / data.resumen.total_ventas) : '₡0'}</div>
-      </div>
-      <div class="card">
-        <div class="card-label">Total ventas</div>
-        <div class="card-value">${data.resumen.total_ventas}</div>
-      </div>
+      <div class="card"><div class="card-label">Margen bruto</div><div class="card-value">${data.resumen.ingresos_ventas > 0 ? Math.round((data.resumen.ganancia_bruta / data.resumen.ingresos_ventas) * 100) : 0}%</div></div>
+      <div class="card"><div class="card-label">Margen neto</div><div class="card-value">${data.resumen.ingresos_ventas > 0 ? Math.round((data.resumen.ganancia / data.resumen.ingresos_ventas) * 100) : 0}%</div></div>
+      <div class="card"><div class="card-label">Ticket promedio</div><div class="card-value">${data.resumen.total_ventas > 0 ? fmt(data.resumen.ingresos_ventas / data.resumen.total_ventas) : '₡0'}</div></div>
+      <div class="card"><div class="card-label">Total ventas</div><div class="card-value">${data.resumen.total_ventas}</div></div>
     </div>
   </div>
 
@@ -124,7 +113,14 @@ export async function generarPDFMensual(data: PDFData) {
       <div class="section-title">Estado de resultados</div>
       <table>
         <tr><th>Concepto</th><th style="text-align:right">Monto</th></tr>
-        <tr><td>Ingresos por ventas</td><td>${fmt(data.resumen.ingresos_ventas)}</td></tr>
+        <tr><td>Ingresos brutos</td><td>${fmt(data.resumen.ingresos_ventas)}</td></tr>
+        ${data.comisionesPorCanal && data.comisionesPorCanal.length > 0 ? data.comisionesPorCanal.map(c => `
+        <tr><td style="padding-left:12px;color:#8F5C52">(-) Comisión ${c.nombre} (${c.porcentaje}%)</td><td style="color:#C0392B">-${fmt(c.monto)}</td></tr>
+        `).join('') : ''}
+        ${data.costosFijosPorCanal && data.costosFijosPorCanal.length > 0 ? data.costosFijosPorCanal.map(c => `
+        <tr><td style="padding-left:12px;color:#8F5C52">(-) Costo fijo ${c.nombre}</td><td style="color:#C0392B">-${fmt(c.monto)}</td></tr>
+        `).join('') : ''}
+        <tr><td><strong>Ingresos netos</strong></td><td><strong>${fmt(data.ingresoNeto ?? data.resumen.ingresos_ventas)}</strong></td></tr>
         <tr><td>Costo mercadería (COGS)</td><td>${fmt(data.resumen.cogs)}</td></tr>
         <tr><td>Ganancia bruta</td><td>${fmt(data.resumen.ganancia_bruta)}</td></tr>
         <tr><td>Gastos operativos</td><td>${fmt(data.resumen.total_gastos)}</td></tr>
@@ -161,7 +157,7 @@ export async function generarPDFMensual(data: PDFData) {
     </div>
   </div>
 
-  ${data.topProductos.length > 5 ? `
+  ${data.topProductos.length > 0 ? `
   <div class="section-wrap">
     <div class="section-title">Productos con menor rotación</div>
     <table>
@@ -182,7 +178,7 @@ export async function generarPDFMensual(data: PDFData) {
     <div class="inventario-value">${fmt(data.resumen.valor_inventario)}</div>
   </div>
 
-${data.tipo === 'anual' && data.resumenPorMes ? `
+  ${data.tipo === 'anual' && data.resumenPorMes ? `
   <div class="section-wrap">
     <div class="section-title">Resumen por mes</div>
     <table>

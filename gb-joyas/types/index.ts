@@ -47,7 +47,7 @@ export interface Venta {
   total_recibido: number;
   metodo_entrega: 'correos_cr' | 'retiro_personal';
   created_at: string;
-  canal_venta?: { id: string; nombre: string; activo: boolean };
+  canal_venta?: { id: string; nombre: string; activo: boolean; comision_porcentaje?: number; costo_fijo_mensual?: number };
   productos?: VentaProducto[];
 }
 
