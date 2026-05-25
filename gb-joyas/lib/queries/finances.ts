@@ -3,16 +3,19 @@ import { supabase } from '../supabase';
 import { ResumenMes } from '../../types';
 
 export async function getResumenMes(año: number, mes: number): Promise<ResumenMes> {
-  const inicio = new Date(año, mes, 1).toISOString();
-  const fin = new Date(año, mes + 1, 0, 23, 59, 59).toISOString();
-  const inicioDate = new Date(año, mes, 1).toISOString().split('T')[0];
-  const finDate = new Date(año, mes + 1, 0).toISOString().split('T')[0];
+  const mesStr = String(mes + 1).padStart(2, '0');
+  const inicio = `${año}-${mesStr}-01T00:00:00.000Z`;
+  const siguienteMes = mes === 11 ? `${año + 1}-01-01T00:00:00.000Z` : `${año}-${String(mes + 2).padStart(2, '0')}-01T00:00:00.000Z`;
+  const fin = siguienteMes;
+  const inicioDate = `${año}-${mesStr}-01`;
+  const finDia = new Date(año, mes + 1, 0).getDate();
+  const finDate = `${año}-${mesStr}-${String(finDia).padStart(2, '0')}`;
 
   const { data: ventas } = await supabase
     .from('ventas')
     .select('id, total_cobrado')
     .gte('fecha', inicio)
-    .lte('fecha', fin);
+    .lt('fecha', fin);
 
   const ventaIds = (ventas || []).map(v => v.id);
   const ingresos = (ventas || []).reduce((sum, v) => sum + Number(v.total_cobrado), 0);
@@ -76,7 +79,7 @@ export async function getGastosPorCategoria(año: number, mes: number) {
     .from('gastos')
     .select(`monto, categoria:categorias_gasto(nombre)`)
     .gte('fecha', inicio)
-    .lte('fecha', fin);
+    .lt('fecha', fin);
 
   if (error) throw error;
 

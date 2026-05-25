@@ -28,6 +28,7 @@ export async function registrarVenta(params: {
   carrito: ItemCarrito[];
   canal_venta_id?: string;
   comision_porcentaje?: number;
+  fecha?: string;
 }) {
   const totalProductos = params.carrito.reduce(
     (sum, item) => sum + (item.producto.precio_venta || (item.producto as any).precio || 0) * item.cantidad, 0
@@ -46,7 +47,7 @@ export async function registrarVenta(params: {
       total_cobrado: totalCobrado,
       total_recibido: params.total_recibido,
       canal_venta_id: params.canal_venta_id || null,
-      fecha: new Date().toISOString(),
+      fecha: params.fecha ? `${params.fecha}T18:00:00.000Z` : new Date().toISOString(),
     })
     .select()
     .single();

@@ -33,6 +33,7 @@ export default function NewSaleScreen() {
   const [metodoEntrega, setMetodoEntrega] = useState<'correos_cr' | 'retiro_personal'>('correos_cr');
   const [canalSeleccionado, setCanalSeleccionado] = useState('');
   const [comisionCanal, setComisionCanal] = useState(0);
+  const [fechaVenta, setFechaVenta] = useState(new Date().toISOString().split('T')[0]);
   const [saving, setSaving] = useState(false);
   const [submitted, setSubmitted] = useState(false);
 
@@ -83,6 +84,7 @@ export default function NewSaleScreen() {
         carrito,
         canal_venta_id: canalSeleccionado,
         comision_porcentaje: comisionCanal || undefined,
+        fecha: fechaVenta,
       });
       limpiarCarrito();
       router.dismissAll();
@@ -229,6 +231,18 @@ export default function NewSaleScreen() {
                   multiline numberOfLines={3} style={{ height: 80, textAlignVertical: 'top' }} />
               )}
             />
+
+            <Text style={styles.fieldLabel}>FECHA DE LA VENTA</Text>
+            <TextInput
+              style={styles.fechaInput}
+              value={fechaVenta}
+              onChangeText={setFechaVenta}
+              placeholder="2026-05-20"
+              placeholderTextColor={COLORS.textLight}
+            />
+            <Text style={{ fontSize: 11, color: COLORS.textMuted, marginBottom: 12 }}>
+              Formato: YYYY-MM-DD. Dejá la fecha de hoy si la venta es actual.
+            </Text>
 
             <Text style={styles.fieldLabel}>MÉTODO DE ENTREGA</Text>
             <View style={styles.entregaOptions}>
@@ -382,4 +396,5 @@ const styles = StyleSheet.create({
   channelConfirmar: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: COLORS.surfaceAlt, borderRadius: SIZES.radiusMd, padding: 12, marginTop: 8, borderWidth: 1, borderColor: COLORS.border },
   channelConfirmarLabel: { fontSize: 12, color: COLORS.textMuted, fontWeight: '500' },
   channelConfirmarValue: { fontSize: 13, color: COLORS.textPrimary, fontWeight: '600' },
+  fechaInput: { borderWidth: 1, borderColor: 'rgba(232,200,184,0.6)', borderRadius: SIZES.radiusMd, padding: 12, fontSize: 14, color: COLORS.textPrimary, backgroundColor: 'white', marginBottom: 4 },
 });

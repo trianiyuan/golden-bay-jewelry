@@ -28,6 +28,7 @@ export default function FinancesScreen() {
 
   const cargar = useCallback(() => {
     async function fetchData() {
+      setHistorico([]);
       setLoading(true);
       try {
         const [r, h, gc] = await Promise.all([
