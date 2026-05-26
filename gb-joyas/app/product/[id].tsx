@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity, StyleSheet,
-  SafeAreaView, Alert, Image, ActivityIndicator, Modal,
+  SafeAreaView, Alert, Image, ActivityIndicator, Modal, useWindowDimensions,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
@@ -31,6 +31,9 @@ const TIPOS_ARETE = [
 export default function ProductDetailScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
+  const { width } = useWindowDimensions();
+  const isDesktop = width > 768;
+
   const [producto, setProducto] = useState<Producto | null>(null);
   const [loading, setLoading] = useState(true);
   const [ajustando, setAjustando] = useState(false);
@@ -209,6 +212,62 @@ export default function ProductDetailScreen() {
   if (!producto) return null;
   const stockBajo = producto.cantidad < 3;
 
+  // Componente reutilizable de modales
+  const Modales = () => (
+    <>
+      <Modal visible={modalArchivar} animationType="fade" transparent>
+        <View style={styles.confirmOverlay}>
+          <View style={styles.confirmBox}>
+            <Text style={styles.confirmTitulo}>Archivar producto</Text>
+            <Text style={styles.confirmMensaje}>"{producto?.nombre}" se ocultará del inventario pero sus ventas se mantendrán en los reportes.</Text>
+            <View style={styles.confirmBtns}>
+              <TouchableOpacity style={styles.confirmCancelar} onPress={() => setModalArchivar(false)}>
+                <Text style={styles.confirmCancelarText}>Cancelar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.confirmEliminar} onPress={ejecutarArchivar}>
+                <Text style={styles.confirmEliminarText}>Archivar</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal visible={modalEliminar} animationType="fade" transparent>
+        <View style={styles.confirmOverlay}>
+          <View style={styles.confirmBox}>
+            <Text style={styles.confirmTitulo}>Eliminar producto</Text>
+            <Text style={styles.confirmMensaje}>¿Eliminás "{producto?.nombre}"? Esta acción no se puede deshacer.</Text>
+            <View style={styles.confirmBtns}>
+              <TouchableOpacity style={styles.confirmCancelar} onPress={() => setModalEliminar(false)}>
+                <Text style={styles.confirmCancelarText}>Cancelar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.confirmEliminar} onPress={ejecutarEliminar}>
+                <Text style={styles.confirmEliminarText}>Eliminar</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal visible={modalEliminarConVentas} animationType="fade" transparent>
+        <View style={styles.confirmOverlay}>
+          <View style={styles.confirmBox}>
+            <Text style={styles.confirmTitulo}>Este producto tiene ventas</Text>
+            <Text style={styles.confirmMensaje}>"{producto?.nombre}" tiene ventas registradas. Si lo eliminás, los totales de tus reportes no se verán afectados, pero el detalle de esas ventas perderá la referencia al producto.</Text>
+            <View style={styles.confirmBtns}>
+              <TouchableOpacity style={styles.confirmCancelar} onPress={() => setModalEliminarConVentas(false)}>
+                <Text style={styles.confirmCancelarText}>Cancelar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.confirmEliminar} onPress={ejecutarEliminarConVentas}>
+                <Text style={styles.confirmEliminarText}>Eliminar igual</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+    </>
+  );
+
   if (editMode) {
     return (
       <SafeAreaView style={styles.safe}>
@@ -297,57 +356,7 @@ export default function ProductDetailScreen() {
           </TouchableOpacity>
           <View style={{ height: 20 }} />
         </ScrollView>
-
-        <Modal visible={modalArchivar} animationType="fade" transparent>
-        <View style={styles.confirmOverlay}>
-          <View style={styles.confirmBox}>
-            <Text style={styles.confirmTitulo}>Archivar producto</Text>
-            <Text style={styles.confirmMensaje}>"{producto?.nombre}" se ocultará del inventario pero sus ventas se mantendrán en los reportes.</Text>
-            <View style={styles.confirmBtns}>
-              <TouchableOpacity style={styles.confirmCancelar} onPress={() => setModalArchivar(false)}>
-                <Text style={styles.confirmCancelarText}>Cancelar</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.confirmEliminar} onPress={ejecutarArchivar}>
-                <Text style={styles.confirmEliminarText}>Archivar</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
-
-      <Modal visible={modalEliminar} animationType="fade" transparent>
-        <View style={styles.confirmOverlay}>
-          <View style={styles.confirmBox}>
-            <Text style={styles.confirmTitulo}>Eliminar producto</Text>
-            <Text style={styles.confirmMensaje}>¿Eliminás "{producto?.nombre}"? Esta acción no se puede deshacer.</Text>
-            <View style={styles.confirmBtns}>
-              <TouchableOpacity style={styles.confirmCancelar} onPress={() => setModalEliminar(false)}>
-                <Text style={styles.confirmCancelarText}>Cancelar</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.confirmEliminar} onPress={ejecutarEliminar}>
-                <Text style={styles.confirmEliminarText}>Eliminar</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
-
-        <Modal visible={modalEliminarConVentas} animationType="fade" transparent>
-          <View style={styles.confirmOverlay}>
-            <View style={styles.confirmBox}>
-              <Text style={styles.confirmTitulo}>Este producto tiene ventas</Text>
-              <Text style={styles.confirmMensaje}>"{producto?.nombre}" tiene ventas registradas. Si lo eliminás, los totales de tus reportes no se verán afectados, pero el detalle de esas ventas perderá la referencia al producto.</Text>
-              <View style={styles.confirmBtns}>
-                <TouchableOpacity style={styles.confirmCancelar} onPress={() => setModalEliminarConVentas(false)}>
-                  <Text style={styles.confirmCancelarText}>Cancelar</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.confirmEliminar} onPress={ejecutarEliminarConVentas}>
-                  <Text style={styles.confirmEliminarText}>Eliminar igual</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          </View>
-        </Modal>
+        <Modales />
       </SafeAreaView>
     );
   }
@@ -363,50 +372,103 @@ export default function ProductDetailScreen() {
       />
 
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
-        <TouchableOpacity style={styles.imageContainer} onPress={cambiarImagen} activeOpacity={0.9}>
-          {producto.imagen_url
-            ? <Image source={{ uri: producto.imagen_url }} style={styles.image} resizeMode="cover" />
-            : <View style={styles.imagePlaceholder}>
-                <Text style={{ fontSize: 52 }}>💍</Text>
-                <Text style={styles.imagePlaceholderText}>Tocá para agregar foto</Text>
-              </View>
-          }
-          <View style={styles.imageOverlay}><Text style={styles.imageOverlayText}>📷 Cambiar foto</Text></View>
-        </TouchableOpacity>
 
-        <View style={styles.infoCard}>
-          <Text style={styles.productoNombre}>{producto.nombre}</Text>
-          <View style={styles.metaRow}>
-            <View style={[styles.colorDotLg, { backgroundColor: COLOR_DOTS[producto.color] }]} />
-            <Text style={styles.metaText}>{COLOR_LABELS[producto.color]} · Talla {producto.talla?.valor}</Text>
-            <View style={styles.categoriaBadge}>
-              <Text style={styles.categoriaText}>{producto.categoria?.nombre}</Text>
-            </View>
-            {producto.tipo_arete && (
-              <View style={[styles.categoriaBadge, { marginLeft: 4 }]}>
-                <Text style={styles.categoriaText}>{producto.tipo_arete === 'regular' ? 'Regular' : 'Ear Cuff'}</Text>
+        {/* LAYOUT DESKTOP: imagen izquierda + info derecha */}
+        {isDesktop ? (
+          <View style={styles.desktopRow}>
+            <TouchableOpacity style={styles.desktopImage} onPress={cambiarImagen} activeOpacity={0.9}>
+              {producto.imagen_url
+                ? <Image source={{ uri: producto.imagen_url }} style={styles.image} resizeMode="cover" />
+                : <View style={styles.imagePlaceholder}>
+                    <Text style={{ fontSize: 52 }}>💍</Text>
+                    <Text style={styles.imagePlaceholderText}>Tocá para agregar foto</Text>
+                  </View>
+              }
+              <View style={styles.imageOverlay}><Text style={styles.imageOverlayText}>📷 Cambiar foto</Text></View>
+            </TouchableOpacity>
+            <View style={styles.desktopInfo}>
+              <View style={styles.infoCard}>
+                <Text style={styles.productoNombre}>{producto.nombre}</Text>
+                <View style={styles.metaRow}>
+                  <View style={[styles.colorDotLg, { backgroundColor: COLOR_DOTS[producto.color] }]} />
+                  <Text style={styles.metaText}>{COLOR_LABELS[producto.color]} · Talla {producto.talla?.valor}</Text>
+                  <View style={styles.categoriaBadge}>
+                    <Text style={styles.categoriaText}>{producto.categoria?.nombre}</Text>
+                  </View>
+                  {producto.tipo_arete && (
+                    <View style={[styles.categoriaBadge, { marginLeft: 4 }]}>
+                      <Text style={styles.categoriaText}>{producto.tipo_arete === 'regular' ? 'Regular' : 'Ear Cuff'}</Text>
+                    </View>
+                  )}
+                </View>
+                {producto.descripcion ? <Text style={styles.descripcion}>{producto.descripcion}</Text> : null}
+                <View style={styles.pricesRow}>
+                  <View style={styles.priceItem}>
+                    <Text style={styles.priceLabel}>PRECIO VENTA</Text>
+                    <Text style={styles.priceValue}>₡{(producto.precio_venta || (producto as any).precio || 0).toLocaleString('es-CR')}</Text>
+                  </View>
+                  <View style={styles.priceItem}>
+                    <Text style={styles.priceLabel}>PRECIO COSTO</Text>
+                    <Text style={styles.priceValue}>₡{(producto.precio_costo || 0).toLocaleString('es-CR')}</Text>
+                  </View>
+                  <View style={styles.priceItem}>
+                    <Text style={styles.priceLabel}>MARGEN</Text>
+                    <Text style={[styles.priceValue, { color: COLORS.wine }]}>
+                      ₡{((producto.precio_venta || (producto as any).precio || 0) - (producto.precio_costo || 0)).toLocaleString('es-CR')}
+                    </Text>
+                  </View>
+                </View>
               </View>
-            )}
+            </View>
           </View>
-          {producto.descripcion ? <Text style={styles.descripcion}>{producto.descripcion}</Text> : null}
+        ) : (
+          <>
+            {/* LAYOUT MOBILE: imagen arriba */}
+            <TouchableOpacity style={styles.imageContainer} onPress={cambiarImagen} activeOpacity={0.9}>
+              {producto.imagen_url
+                ? <Image source={{ uri: producto.imagen_url }} style={styles.image} resizeMode="cover" />
+                : <View style={styles.imagePlaceholder}>
+                    <Text style={{ fontSize: 52 }}>💍</Text>
+                    <Text style={styles.imagePlaceholderText}>Tocá para agregar foto</Text>
+                  </View>
+              }
+              <View style={styles.imageOverlay}><Text style={styles.imageOverlayText}>📷 Cambiar foto</Text></View>
+            </TouchableOpacity>
 
-          <View style={styles.pricesRow}>
-            <View style={styles.priceItem}>
-              <Text style={styles.priceLabel}>PRECIO VENTA</Text>
-              <Text style={styles.priceValue}>₡{(producto.precio_venta || (producto as any).precio || 0).toLocaleString('es-CR')}</Text>
+            <View style={styles.infoCard}>
+              <Text style={styles.productoNombre}>{producto.nombre}</Text>
+              <View style={styles.metaRow}>
+                <View style={[styles.colorDotLg, { backgroundColor: COLOR_DOTS[producto.color] }]} />
+                <Text style={styles.metaText}>{COLOR_LABELS[producto.color]} · Talla {producto.talla?.valor}</Text>
+                <View style={styles.categoriaBadge}>
+                  <Text style={styles.categoriaText}>{producto.categoria?.nombre}</Text>
+                </View>
+                {producto.tipo_arete && (
+                  <View style={[styles.categoriaBadge, { marginLeft: 4 }]}>
+                    <Text style={styles.categoriaText}>{producto.tipo_arete === 'regular' ? 'Regular' : 'Ear Cuff'}</Text>
+                  </View>
+                )}
+              </View>
+              {producto.descripcion ? <Text style={styles.descripcion}>{producto.descripcion}</Text> : null}
+              <View style={styles.pricesRow}>
+                <View style={styles.priceItem}>
+                  <Text style={styles.priceLabel}>PRECIO VENTA</Text>
+                  <Text style={styles.priceValue}>₡{(producto.precio_venta || (producto as any).precio || 0).toLocaleString('es-CR')}</Text>
+                </View>
+                <View style={styles.priceItem}>
+                  <Text style={styles.priceLabel}>PRECIO COSTO</Text>
+                  <Text style={styles.priceValue}>₡{(producto.precio_costo || 0).toLocaleString('es-CR')}</Text>
+                </View>
+                <View style={styles.priceItem}>
+                  <Text style={styles.priceLabel}>MARGEN</Text>
+                  <Text style={[styles.priceValue, { color: COLORS.wine }]}>
+                    ₡{((producto.precio_venta || (producto as any).precio || 0) - (producto.precio_costo || 0)).toLocaleString('es-CR')}
+                  </Text>
+                </View>
+              </View>
             </View>
-            <View style={styles.priceItem}>
-              <Text style={styles.priceLabel}>PRECIO COSTO</Text>
-              <Text style={styles.priceValue}>₡{(producto.precio_costo || 0).toLocaleString('es-CR')}</Text>
-            </View>
-            <View style={styles.priceItem}>
-              <Text style={styles.priceLabel}>MARGEN</Text>
-              <Text style={[styles.priceValue, { color: COLORS.wine }]}>
-                ₡{((producto.precio_venta || (producto as any).precio || 0) - (producto.precio_costo || 0)).toLocaleString('es-CR')}
-              </Text>
-            </View>
-          </View>
-        </View>
+          </>
+        )}
 
         <View style={styles.stockCard}>
           <Text style={styles.stockTitle}>STOCK ACTUAL</Text>
@@ -474,57 +536,7 @@ export default function ProductDetailScreen() {
         </TouchableOpacity>
         <View style={{ height: 20 }} />
       </ScrollView>
-
-      <Modal visible={modalArchivar} animationType="fade" transparent>
-        <View style={styles.confirmOverlay}>
-          <View style={styles.confirmBox}>
-            <Text style={styles.confirmTitulo}>Archivar producto</Text>
-            <Text style={styles.confirmMensaje}>"{producto?.nombre}" se ocultará del inventario pero sus ventas se mantendrán en los reportes.</Text>
-            <View style={styles.confirmBtns}>
-              <TouchableOpacity style={styles.confirmCancelar} onPress={() => setModalArchivar(false)}>
-                <Text style={styles.confirmCancelarText}>Cancelar</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.confirmEliminar} onPress={ejecutarArchivar}>
-                <Text style={styles.confirmEliminarText}>Archivar</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
-
-      <Modal visible={modalEliminar} animationType="fade" transparent>
-        <View style={styles.confirmOverlay}>
-          <View style={styles.confirmBox}>
-            <Text style={styles.confirmTitulo}>Eliminar producto</Text>
-            <Text style={styles.confirmMensaje}>¿Eliminás "{producto?.nombre}"? Esta acción no se puede deshacer.</Text>
-            <View style={styles.confirmBtns}>
-              <TouchableOpacity style={styles.confirmCancelar} onPress={() => setModalEliminar(false)}>
-                <Text style={styles.confirmCancelarText}>Cancelar</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.confirmEliminar} onPress={ejecutarEliminar}>
-                <Text style={styles.confirmEliminarText}>Eliminar</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
-
-      <Modal visible={modalEliminarConVentas} animationType="fade" transparent>
-        <View style={styles.confirmOverlay}>
-          <View style={styles.confirmBox}>
-            <Text style={styles.confirmTitulo}>Este producto tiene ventas</Text>
-            <Text style={styles.confirmMensaje}>"{producto?.nombre}" tiene ventas registradas. Si lo eliminás, los totales de tus reportes no se verán afectados, pero el detalle de esas ventas perderá la referencia al producto.</Text>
-            <View style={styles.confirmBtns}>
-              <TouchableOpacity style={styles.confirmCancelar} onPress={() => setModalEliminarConVentas(false)}>
-                <Text style={styles.confirmCancelarText}>Cancelar</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.confirmEliminar} onPress={ejecutarEliminarConVentas}>
-                <Text style={styles.confirmEliminarText}>Eliminar igual</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
+      <Modales />
     </SafeAreaView>
   );
 }
@@ -535,6 +547,11 @@ const styles = StyleSheet.create({
   content: { padding: SIZES.lg },
   editBtn: { backgroundColor: COLORS.surfaceAlt, borderRadius: SIZES.radiusSm, paddingVertical: 6, paddingHorizontal: 12, borderWidth: 1, borderColor: COLORS.border },
   editBtnText: { fontSize: 13, fontWeight: '600', color: COLORS.wine },
+  // Desktop layout
+  desktopRow: { flexDirection: 'row', gap: 24, marginBottom: 16, alignItems: 'flex-start' },
+  desktopImage: { width: '35%', aspectRatio: 1, borderRadius: SIZES.radiusLg, overflow: 'hidden', borderWidth: 1, borderColor: COLORS.border },
+  desktopInfo: { flex: 1 },
+  // Mobile layout
   imageContainer: { width: '100%', aspectRatio: 1.5, borderRadius: SIZES.radiusLg, overflow: 'hidden', marginBottom: 16, borderWidth: 1, borderColor: COLORS.border },
   image: { width: '100%', height: '100%' },
   imagePlaceholder: { flex: 1, backgroundColor: COLORS.blush, alignItems: 'center', justifyContent: 'center', gap: 8 },
@@ -583,8 +600,8 @@ const styles = StyleSheet.create({
   tallaChipActive: { backgroundColor: COLORS.wine, borderColor: COLORS.wine },
   tallaText: { fontSize: 13, fontWeight: '500', color: COLORS.textPrimary },
   tallaTextActive: { color: COLORS.surface },
-  confirmOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', padding: 24 },
-  confirmBox: { backgroundColor: COLORS.surface, borderRadius: SIZES.radiusLg, padding: 24 },
+  confirmOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', alignItems: 'center', padding: 24 },
+  confirmBox: { backgroundColor: COLORS.surface, borderRadius: SIZES.radiusLg, padding: 24, maxWidth: 480, width: '100%', alignSelf: 'center' },
   confirmTitulo: { fontSize: 16, fontWeight: '600', color: COLORS.textPrimary, marginBottom: 8 },
   confirmMensaje: { fontSize: 13, color: COLORS.textMuted, marginBottom: 24, lineHeight: 20 },
   confirmBtns: { flexDirection: 'row', gap: 10 },
