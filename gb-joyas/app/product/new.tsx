@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity,
-  StyleSheet, SafeAreaView, Alert, Image, ActivityIndicator,
+  StyleSheet, SafeAreaView, Alert, Image, ActivityIndicator, useWindowDimensions,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
@@ -42,6 +42,9 @@ function RequiredLabel({ label }: { label: string }) {
 
 export default function NewProductScreen() {
   const router = useRouter();
+  const { width } = useWindowDimensions();
+  const isDesktop = width > 768;
+
   const [categorias, setCategorias] = useState<Categoria[]>([]);
   const [tallas, setTallas] = useState<TallaPorCategoria[]>([]);
   const [catSeleccionada, setCatSeleccionada] = useState('');
@@ -84,7 +87,6 @@ export default function NewProductScreen() {
       Alert.alert('Campo requerido', 'Seleccioná el tipo de arete.');
       return;
     }
-
     try {
       setSaving(true);
       const producto = await createProducto({
@@ -117,25 +119,178 @@ export default function NewProductScreen() {
   const catError = submitted && !catSeleccionada;
   const tallaError = submitted && !tallaSeleccionada;
 
+  // Imagen picker reutilizable
+  const ImagePickerBlock = ({ style }: { style?: any }) => (
+    <TouchableOpacity style={[styles.imagePicker, style]} onPress={pickImage} activeOpacity={0.85}>
+      {imagenUri ? (
+        <>
+          <Image source={{ uri: imagenUri }} style={styles.imagePreview} />
+          <View style={styles.imageOverlay}>
+            <Text style={styles.imageOverlayText}>📷 Cambiar foto</Text>
+          </View>
+        </>
+      ) : (
+        <>
+          <View style={styles.imagePlaceholder}>
+            <Text style={styles.imagePlaceholderIcon}>📷</Text>
+            <Text style={styles.imagePlaceholderText}>Tocá para agregar foto</Text>
+          </View>
+          <View style={styles.imageOverlay}>
+            <Text style={styles.imageOverlayText}>📷 Agregar foto</Text>
+          </View>
+        </>
+      )}
+    </TouchableOpacity>
+  );
+
+  // Campos de categoría, talla, tipo arete, color, descripción
+  const ExtraFields = () => (
+    <>
+      <RequiredLabel label="Categoría" />
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 14 }}>
+        <View style={styles.chipsRow}>
+          {categorias.map(cat => (
+            <TouchableOpacity
+              key={cat.id}
+              style={[styles.chip, catSeleccionada === cat.id && styles.chipActive, catError && styles.chipError]}
+              onPress={() => { setCatSeleccionada(cat.id); setTipoAreteSeleccionado(null); }}
+            >
+              <Text style={[styles.chipText, catSeleccionada === cat.id && styles.chipTextActive]}>
+                {cat.nombre}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      </ScrollView>
+      {catError && <Text style={styles.errorMsg}>Seleccioná una categoría</Text>}
+
+      {tallas.length > 0 && (
+        <>
+          <RequiredLabel label="Talla" />
+          <View style={styles.tallasGrid}>
+            {tallas.map(t => (
+              <TouchableOpacity
+                key={t.id}
+                style={[styles.tallaChip, tallaSeleccionada === t.id && styles.tallaChipActive, tallaError && styles.chipError]}
+                onPress={() => setTallaSeleccionada(t.id)}
+              >
+                <Text style={[styles.tallaText, tallaSeleccionada === t.id && styles.tallaTextActive]}>
+                  {t.valor}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+          {tallaError && <Text style={styles.errorMsg}>Seleccioná una talla</Text>}
+        </>
+      )}
+
+      {esAretes && (
+        <>
+          <RequiredLabel label="Tipo de arete" />
+          <View style={[styles.chipsRow, { marginBottom: 14 }]}>
+            {TIPOS_ARETE.map(t => (
+              <TouchableOpacity
+                key={t.key}
+                style={[styles.chip, tipoAreteSeleccionado === t.key && styles.chipActive]}
+                onPress={() => setTipoAreteSeleccionado(t.key as 'regular' | 'ear_cuff')}
+              >
+                <Text style={[styles.chipText, tipoAreteSeleccionado === t.key && styles.chipTextActive]}>
+                  {t.label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </>
+      )}
+
+      <RequiredLabel label="Color" />
+      <View style={[styles.chipsRow, { marginBottom: 14 }]}>
+        {COLORES.map(c => (
+          <TouchableOpacity
+            key={c.key}
+            style={[styles.chip, colorSeleccionado === c.key && styles.chipActive]}
+            onPress={() => setColorSeleccionado(c.key)}
+          >
+            <View style={[styles.colorDot, { backgroundColor: c.dot }]} />
+            <Text style={[styles.chipText, colorSeleccionado === c.key && styles.chipTextActive]}>
+              {c.label}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+
+      <Controller
+        control={control} name="descripcion"
+        render={({ field: { onChange, value } }) => (
+          <Input label="Descripción (opcional)" value={value} onChangeText={onChange}
+            placeholder="Material, largo, detalles especiales..."
+            multiline numberOfLines={3} style={{ height: 80, textAlignVertical: 'top' }} />
+        )}
+      />
+    </>
+  );
+
   return (
     <SafeAreaView style={styles.safe}>
       <Header showBack backLabel="‹ Cancelar" title="Nuevo Producto" />
 
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
 
-        <View style={styles.topRow}>
-          <TouchableOpacity style={styles.imagePicker} onPress={pickImage} activeOpacity={0.85}>
-            {imagenUri ? (
-              <Image source={{ uri: imagenUri }} style={styles.imagePreview} />
-            ) : (
-              <View style={styles.imagePlaceholder}>
-                <Text style={styles.imagePlaceholderIcon}>📷</Text>
-                <Text style={styles.imagePlaceholderText}>Foto</Text>
+        {isDesktop ? (
+          // DESKTOP: imagen 35% izquierda, todo lo demás derecha
+          <View style={styles.desktopRow}>
+            <ImagePickerBlock style={styles.desktopImage} />
+            <View style={styles.desktopFields}>
+              <Controller
+                control={control} name="nombre"
+                rules={{ required: 'El nombre es obligatorio' }}
+                render={({ field: { onChange, value } }) => (
+                  <Input label="Nombre *" value={value} onChangeText={onChange}
+                    placeholder="Ej. Anillo solitario" error={errors.nombre?.message} />
+                )}
+              />
+              <View style={styles.desktopPricesRow}>
+                <View style={{ flex: 1 }}>
+                  <Controller
+                    control={control} name="precio_venta"
+                    rules={{ required: 'Requerido', pattern: { value: /^\d+(\.\d{1,2})?$/, message: 'Solo números' } }}
+                    render={({ field: { onChange, value } }) => (
+                      <Input label="Precio venta (₡) *" value={value}
+                        onChangeText={v => onChange(v.replace(/[^0-9.]/g, ''))}
+                        keyboardType="numeric" placeholder="18000" error={errors.precio_venta?.message} />
+                    )}
+                  />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Controller
+                    control={control} name="precio_costo"
+                    rules={{ required: 'Requerido', pattern: { value: /^\d+(\.\d{1,2})?$/, message: 'Solo números' } }}
+                    render={({ field: { onChange, value } }) => (
+                      <Input label="Precio costo (₡) *" value={value}
+                        onChangeText={v => onChange(v.replace(/[^0-9.]/g, ''))}
+                        keyboardType="numeric" placeholder="5000" error={errors.precio_costo?.message} />
+                    )}
+                  />
+                </View>
+                <View style={{ width: 120 }}>
+                  <Controller
+                    control={control} name="cantidad"
+                    rules={{ required: 'Requerido', pattern: { value: /^\d+$/, message: 'Solo números' } }}
+                    render={({ field: { onChange, value } }) => (
+                      <Input label="Cantidad *" value={value}
+                        onChangeText={v => onChange(v.replace(/[^0-9]/g, ''))}
+                        keyboardType="numeric" placeholder="5" error={errors.cantidad?.message} />
+                    )}
+                  />
+                </View>
               </View>
-            )}
-          </TouchableOpacity>
-
-          <View style={styles.topInfo}>
+              <ExtraFields />
+            </View>
+          </View>
+        ) : (
+          // MOBILE: imagen arriba grande, campos abajo
+          <>
+            <ImagePickerBlock style={styles.mobileImage} />
             <Controller
               control={control} name="nombre"
               rules={{ required: 'El nombre es obligatorio' }}
@@ -164,97 +319,16 @@ export default function NewProductScreen() {
             />
             <Controller
               control={control} name="cantidad"
-              rules={{ required: 'Requerido', pattern: { value: /^\d+$/, message: 'Solo números enteros' } }}
+              rules={{ required: 'Requerido', pattern: { value: /^\d+$/, message: 'Solo números' } }}
               render={({ field: { onChange, value } }) => (
                 <Input label="Cantidad *" value={value}
                   onChangeText={v => onChange(v.replace(/[^0-9]/g, ''))}
                   keyboardType="numeric" placeholder="5" error={errors.cantidad?.message} />
               )}
             />
-          </View>
-        </View>
-
-        <RequiredLabel label="Categoría" />
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 14 }}>
-          <View style={styles.chipsRow}>
-            {categorias.map(cat => (
-              <TouchableOpacity
-                key={cat.id}
-                style={[styles.chip, catSeleccionada === cat.id && styles.chipActive, catError && styles.chipError]}
-                onPress={() => { setCatSeleccionada(cat.id); setTipoAreteSeleccionado(null); }}
-              >
-                <Text style={[styles.chipText, catSeleccionada === cat.id && styles.chipTextActive]}>
-                  {cat.nombre}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </ScrollView>
-        {catError && <Text style={styles.errorMsg}>Seleccioná una categoría</Text>}
-
-        {tallas.length > 0 && (
-          <>
-            <RequiredLabel label="Talla" />
-            <View style={styles.tallasGrid}>
-              {tallas.map(t => (
-                <TouchableOpacity
-                  key={t.id}
-                  style={[styles.tallaChip, tallaSeleccionada === t.id && styles.tallaChipActive, tallaError && styles.chipError]}
-                  onPress={() => setTallaSeleccionada(t.id)}
-                >
-                  <Text style={[styles.tallaText, tallaSeleccionada === t.id && styles.tallaTextActive]}>
-                    {t.valor}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-            {tallaError && <Text style={styles.errorMsg}>Seleccioná una talla</Text>}
+            <ExtraFields />
           </>
         )}
-
-        {esAretes && (
-          <>
-            <RequiredLabel label="Tipo de arete" />
-            <View style={[styles.chipsRow, { marginBottom: 14 }]}>
-              {TIPOS_ARETE.map(t => (
-                <TouchableOpacity
-                  key={t.key}
-                  style={[styles.chip, tipoAreteSeleccionado === t.key && styles.chipActive]}
-                  onPress={() => setTipoAreteSeleccionado(t.key as 'regular' | 'ear_cuff')}
-                >
-                  <Text style={[styles.chipText, tipoAreteSeleccionado === t.key && styles.chipTextActive]}>
-                    {t.label}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </>
-        )}
-
-        <RequiredLabel label="Color" />
-        <View style={[styles.chipsRow, { marginBottom: 14 }]}>
-          {COLORES.map(c => (
-            <TouchableOpacity
-              key={c.key}
-              style={[styles.chip, colorSeleccionado === c.key && styles.chipActive]}
-              onPress={() => setColorSeleccionado(c.key)}
-            >
-              <View style={[styles.colorDot, { backgroundColor: c.dot }]} />
-              <Text style={[styles.chipText, colorSeleccionado === c.key && styles.chipTextActive]}>
-                {c.label}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-
-        <Controller
-          control={control} name="descripcion"
-          render={({ field: { onChange, value } }) => (
-            <Input label="Descripción (opcional)" value={value} onChangeText={onChange}
-              placeholder="Material, largo, detalles especiales..."
-              multiline numberOfLines={3} style={{ height: 80, textAlignVertical: 'top' }} />
-          )}
-        />
 
         <View style={{ height: 20 }} />
       </ScrollView>
@@ -279,13 +353,25 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: COLORS.background },
   scroll: { flex: 1 },
   content: { padding: SIZES.lg },
-  topRow: { flexDirection: 'row', gap: 16, marginBottom: 16 },
-  imagePicker: { width: 120, height: 120, borderRadius: SIZES.radiusLg, overflow: 'hidden', borderWidth: 1, borderColor: COLORS.border, flexShrink: 0 },
+
+  // Desktop
+  desktopRow: { flexDirection: 'row', gap: 24, alignItems: 'flex-start' },
+  desktopImage: { width: '35%', aspectRatio: 1, flexShrink: 0 },
+  desktopFields: { flex: 1 },
+  desktopPricesRow: { flexDirection: 'row', gap: 12 },
+
+  // Mobile
+  mobileImage: { width: '100%', aspectRatio: 1.5, marginBottom: 16 },
+
+  // Imagen picker
+  imagePicker: { borderRadius: SIZES.radiusLg, overflow: 'hidden', borderWidth: 1, borderColor: COLORS.border },
   imagePreview: { width: '100%', height: '100%' },
-  imagePlaceholder: { flex: 1, backgroundColor: COLORS.blush, alignItems: 'center', justifyContent: 'center', gap: 4 },
-  imagePlaceholderIcon: { fontSize: 28 },
-  imagePlaceholderText: { fontSize: 11, color: COLORS.textMuted, fontWeight: '500' },
-  topInfo: { flex: 1 },
+  imagePlaceholder: { flex: 1, backgroundColor: COLORS.blush, alignItems: 'center', justifyContent: 'center', gap: 6 },
+  imagePlaceholderIcon: { fontSize: 32 },
+  imagePlaceholderText: { fontSize: 12, color: COLORS.textMuted, fontWeight: '500' },
+  imageOverlay: { position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: 'rgba(0,0,0,0.25)', padding: 8, alignItems: 'center' },
+  imageOverlayText: { fontSize: 12, color: 'white', fontWeight: '500' },
+
   fieldLabel: { fontSize: SIZES.textXs, fontWeight: '600', color: COLORS.textMuted, letterSpacing: 0.7, marginBottom: 8, marginTop: 4 },
   errorMsg: { fontSize: 11, color: COLORS.error, marginBottom: 8, marginTop: -4 },
   chipsRow: { flexDirection: 'row', gap: 8, flexWrap: 'wrap', marginBottom: 4 },
