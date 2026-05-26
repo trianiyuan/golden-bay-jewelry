@@ -61,7 +61,6 @@ export default function FinancesScreen() {
 
   async function descargarPDF() {
   if (!resumen) return;
-  console.log('tipoPDF:', tipoPDF);
   try {
     setGenerando(true);
 
