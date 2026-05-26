@@ -35,7 +35,9 @@ export async function registrarVenta(params: {
   );
   const subtotal = totalProductos + params.costo_envio;
   const montoComision = params.comision_porcentaje ? Math.round(subtotal * (params.comision_porcentaje / 100)) : 0;
-  const totalCobrado = subtotal + montoComision;
+  const totalCobrado = params.total_recibido > 0 && subtotal === 0
+    ? params.total_recibido
+    : subtotal + montoComision;
 
   const { data: venta, error: ventaError } = await supabase
     .from('ventas')

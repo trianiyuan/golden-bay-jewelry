@@ -57,8 +57,8 @@ export async function getResumenMes(año: number, mes: number): Promise<ResumenM
   };
 }
 
-export async function getResumenUltimosMeses(cantMeses = 6) {
-  const hoy = new Date();
+export async function getResumenUltimosMeses(cantMeses = 6, mesReferencia?: Date) {
+  const hoy = mesReferencia || new Date();
   const meses = Array.from({ length: cantMeses }, (_, i) => {
     const fecha = new Date(hoy.getFullYear(), hoy.getMonth() - (cantMeses - 1 - i), 1);
     return { año: fecha.getFullYear(), mes: fecha.getMonth() };

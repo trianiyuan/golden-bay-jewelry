@@ -33,7 +33,7 @@ export default function FinancesScreen() {
       try {
         const [r, h, gc] = await Promise.all([
           getResumenMes(mes.getFullYear(), mes.getMonth()),
-          getResumenUltimosMeses(5),
+          getResumenUltimosMeses(6, mes),
           getGastosPorCategoria(mes.getFullYear(), mes.getMonth()),
         ]);
         setResumen(r); setHistorico(h); setGastosCat(gc);
@@ -290,14 +290,14 @@ export default function FinancesScreen() {
         )}
 
         <View style={styles.chartCard}>
-          <Text style={styles.chartTitle}>Ganancias últimos 5 meses</Text>
+          <Text style={styles.chartTitle}>Ganancias últimos 6 meses</Text>
           {historico.map((h) => {
             const mesActual = h.mes === resumen?.mes;
             const pct = maxGanancia > 0 ? Math.max((h.ganancia / maxGanancia) * 100, 2) : 2;
             return (
               <View key={h.mes} style={styles.barRow}>
                 <Text style={[styles.barLabel, mesActual && styles.barLabelActive]}>
-                  {format(new Date(h.mes + '-01'), 'MMM', { locale: es })}
+                  {format(new Date(h.mes + '-15'), 'MMM', { locale: es })}
                 </Text>
                 <View style={styles.barTrack}>
                   <View style={[styles.barFill, { width: `${pct}%` }, mesActual && styles.barFillActive]} />
