@@ -142,7 +142,7 @@ export default function SalesScreen() {
                   {venta.notas ? <Text style={styles.ventaNota} numberOfLines={1}>💬 {venta.notas}</Text> : null}
                 </View>
                 <View style={styles.ventaMonto}>
-                  <Text style={styles.ventaMontoText}>₡{Math.round(Number(venta.total_cobrado) / 1000)}k</Text>
+                  <Text style={styles.ventaMontoText}>₡{Number(venta.total_cobrado).toLocaleString('es-CR')}</Text>
                   {Number(venta.total_recibido) < Number(venta.total_cobrado) && (
                     <View style={styles.pendienteBadge}><Text style={styles.pendienteText}>Pendiente</Text></View>
                   )}

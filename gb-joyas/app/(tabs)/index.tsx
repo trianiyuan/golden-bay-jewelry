@@ -1,6 +1,6 @@
 // app/(tabs)/index.tsx
 import React, { useCallback, useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, SafeAreaView, Modal } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, SafeAreaView, Modal, TextInput } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { COLORS, SIZES } from '../../constants/colors';
 import { Header } from '../../components/ui/Header';
@@ -79,6 +79,8 @@ export default function DashboardScreen() {
   const [stockBajo, setStockBajo] = useState<Producto[]>([]);
   const [resumen, setResumen] = useState<ResumenMes | null>(null);
   const [loading, setLoading] = useState(true);
+  const [calcPrecio, setCalcPrecio] = useState('');
+  const [calcPct, setCalcPct] = useState('30');
   const hoy = new Date();
 
   const cargar = useCallback(() => {
@@ -102,6 +104,11 @@ export default function DashboardScreen() {
   useFocusEffect(cargar);
   const ultimasVentas = ventas.slice(0, 3);
 
+  const precio = parseFloat(calcPrecio) || 0;
+  const pct = parseFloat(calcPct) || 0;
+  const inflado = pct > 0 && pct < 100 ? Math.round(precio / (1 - pct / 100)) : 0;
+  const desinflado = pct > 0 ? Math.round(precio * (1 - pct / 100)) : 0;
+
   return (
     <SafeAreaView style={styles.safe}>
       <Header rightElement={
@@ -112,19 +119,20 @@ export default function DashboardScreen() {
       } />
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
         {hoy.getMonth() === 11 && (
-        <TouchableOpacity
-          style={styles.yearEndBanner}
-          onPress={() => router.push('/(tabs)/finances')}
-          activeOpacity={0.85}
-        >
-          <Text style={styles.yearEndIcon}>📅</Text>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.yearEndTitle}>Año {hoy.getFullYear()} terminando</Text>
-            <Text style={styles.yearEndSub}>Descargá tu reporte anual antes de que se archive en enero.</Text>
-          </View>
-          <Text style={styles.yearEndArrow}>›</Text>
-        </TouchableOpacity>
-      )}
+          <TouchableOpacity
+            style={styles.yearEndBanner}
+            onPress={() => router.push('/(tabs)/finances')}
+            activeOpacity={0.85}
+          >
+            <Text style={styles.yearEndIcon}>📅</Text>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.yearEndTitle}>Año {hoy.getFullYear()} terminando</Text>
+              <Text style={styles.yearEndSub}>Descargá tu reporte anual antes de que se archive en enero.</Text>
+            </View>
+            <Text style={styles.yearEndArrow}>›</Text>
+          </TouchableOpacity>
+        )}
+
         <View style={styles.metricsGrid}>
           <View style={[styles.metricCard, styles.metricDefault]}>
             <Text style={styles.metricLabel}>PRODUCTOS</Text>
@@ -151,6 +159,67 @@ export default function DashboardScreen() {
           </TouchableOpacity>
         </View>
 
+        {/* CALCULADORA DE PRECIOS */}
+        <Text style={styles.sectionTitle}>CALCULADORA DE PRECIOS</Text>
+        <View style={styles.calcCard}>
+          <Text style={styles.calcDesc}>
+            Usá esta calculadora para saber a cuánto poner tus productos en un canal que cobra comisión, y cuánto te quedará después.
+          </Text>
+
+          <View style={styles.calcInputRow}>
+            <View style={styles.calcInputBox}>
+              <Text style={styles.calcLabel}>PRECIO BASE (₡)</Text>
+              <TextInput
+                style={styles.calcInput}
+                value={calcPrecio}
+                onChangeText={v => setCalcPrecio(v.replace(/[^0-9]/g, ''))}
+                keyboardType="numeric"
+                placeholder="10000"
+                placeholderTextColor={COLORS.textLight}
+              />
+            </View>
+            <View style={styles.calcInputBox}>
+              <Text style={styles.calcLabel}>COMISIÓN (%)</Text>
+              <TextInput
+                style={styles.calcInput}
+                value={calcPct}
+                onChangeText={v => setCalcPct(v.replace(/[^0-9]/g, ''))}
+                keyboardType="numeric"
+                placeholder="30"
+                placeholderTextColor={COLORS.textLight}
+              />
+            </View>
+          </View>
+
+          {precio > 0 && pct > 0 ? (
+            <>
+              <View style={styles.calcResultRow}>
+                <View style={styles.calcResult}>
+                  <Text style={styles.calcResultEmoji}>⬆️</Text>
+                  <Text style={styles.calcResultLabel}>Precio a cobrar</Text>
+                  <Text style={styles.calcResultValue}>₡{inflado.toLocaleString('es-CR')}</Text>
+                  <Text style={styles.calcResultHint}>Ponelo así en el canal para recibir tu precio base completo</Text>
+                </View>
+                <View style={styles.calcDivider} />
+                <View style={styles.calcResult}>
+                  <Text style={styles.calcResultEmoji}>⬇️</Text>
+                  <Text style={styles.calcResultLabel}>Lo que recibís</Text>
+                  <Text style={styles.calcResultValue}>₡{desinflado.toLocaleString('es-CR')}</Text>
+                  <Text style={styles.calcResultHint}>Si el canal ya tiene el precio inflado y te quita el {pct}%</Text>
+                </View>
+              </View>
+              <View style={styles.calcExample}>
+                <Text style={styles.calcExampleText}>
+                  Ejemplo: tu arete cuesta ₡{precio.toLocaleString('es-CR')} → lo ponés a ₡{inflado.toLocaleString('es-CR')} → el canal le quita {pct}% (₡{(inflado - precio).toLocaleString('es-CR')}) → vos recibís ₡{precio.toLocaleString('es-CR')} ✓
+                </Text>
+              </View>
+            </>
+          ) : (
+            <Text style={styles.calcHint}>Ingresá el precio base y el porcentaje de comisión para calcular</Text>
+          )}
+        </View>
+
+        {/* VENTAS RECIENTES */}
         <Text style={styles.sectionTitle}>VENTAS RECIENTES</Text>
         {ultimasVentas.map(venta => (
           <View key={venta.id} style={styles.ventaItem}>
@@ -168,7 +237,7 @@ export default function DashboardScreen() {
                 </View>
               )}
             </View>
-            <Text style={styles.ventaMonto}>₡{Math.round(Number(venta.total_cobrado) / 1000)}k</Text>
+            <Text style={styles.ventaMonto}>₡{Number(venta.total_cobrado).toLocaleString('es-CR')}</Text>
           </View>
         ))}
         {ultimasVentas.length === 0 && !loading && (
@@ -217,13 +286,31 @@ const styles = StyleSheet.create({
   metricAccent: { backgroundColor: '#ECABA0', borderWidth: 1, borderColor: '#E09080', shadowColor: '#ECABA0', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.4, shadowRadius: 16 },
   metricArena: { backgroundColor: '#EDD3B9', borderWidth: 1, borderColor: '#DFC09A', shadowColor: '#EDD3B9', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.5, shadowRadius: 16 },
   metricWarn: { backgroundColor: '#622632', borderWidth: 1, borderColor: '#7A3540', shadowColor: '#622632', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.4, shadowRadius: 20 },
-
   metricLabel: { fontSize: 9, color: '#8F5C52', letterSpacing: 0.9, marginBottom: 6, fontWeight: '600', textTransform: 'uppercase' },
   metricValue: { fontSize: 30, fontWeight: '700', color: COLORS.textPrimary, letterSpacing: -0.5 },
   metricSub: { fontSize: SIZES.textSm, color: COLORS.textMuted, marginTop: 4, fontWeight: '500' },
 
   sectionTitle: { fontSize: 10, fontWeight: '700', color: '#8F5C52', letterSpacing: 1, marginBottom: 10, marginTop: SIZES.lg, textTransform: 'uppercase' },
 
+  // Calculadora
+  calcCard: { backgroundColor: COLORS.surface, borderRadius: 16, padding: 16, borderWidth: 1, borderColor: 'rgba(232,200,184,0.5)', marginBottom: 4 },
+  calcDesc: { fontSize: 12, color: COLORS.textMuted, lineHeight: 18, marginBottom: 14 },
+  calcInputRow: { flexDirection: 'row', gap: 12, marginBottom: 14 },
+  calcInputBox: { flex: 1 },
+  calcLabel: { fontSize: 9, fontWeight: '600', color: COLORS.textMuted, letterSpacing: 0.7, marginBottom: 6 },
+  calcInput: { borderWidth: 1, borderColor: 'rgba(232,200,184,0.6)', borderRadius: 10, padding: 10, fontSize: 17, fontWeight: '600', color: COLORS.textPrimary, backgroundColor: '#FFF8F5' },
+  calcResultRow: { flexDirection: 'row', gap: 8, marginBottom: 10 },
+  calcResult: { flex: 1, alignItems: 'center', padding: 12, backgroundColor: '#FDF5F0', borderRadius: 12, borderWidth: 1, borderColor: 'rgba(232,200,184,0.5)' },
+  calcResultEmoji: { fontSize: 18, marginBottom: 4 },
+  calcResultLabel: { fontSize: 11, color: COLORS.textMuted, fontWeight: '500', marginBottom: 6 },
+  calcResultValue: { fontSize: 17, fontWeight: '700', color: COLORS.wine, marginBottom: 4 },
+  calcResultHint: { fontSize: 10, color: COLORS.textMuted, textAlign: 'center', lineHeight: 14 },
+  calcDivider: { width: 0 },
+  calcExample: { backgroundColor: 'rgba(232,200,184,0.2)', borderRadius: 10, padding: 10 },
+  calcExampleText: { fontSize: 11, color: COLORS.textMuted, lineHeight: 16 },
+  calcHint: { fontSize: 12, color: COLORS.textMuted, textAlign: 'center', paddingVertical: 12 },
+
+  // Ventas recientes
   ventaItem: { backgroundColor: 'white', borderRadius: 14, padding: 12, borderWidth: 1, borderColor: 'rgba(232,200,184,0.5)', marginBottom: 8, flexDirection: 'row', alignItems: 'center', gap: 12, shadowColor: '#622632', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 8 },
   ventaAvatar: { width: 38, height: 38, borderRadius: 12, backgroundColor: '#ECABA0', alignItems: 'center', justifyContent: 'center' },
   ventaAvatarText: { fontSize: 12, fontWeight: '700', color: '#622632' },
@@ -232,7 +319,7 @@ const styles = StyleSheet.create({
   ventaDetalle: { fontSize: 11, color: COLORS.textMuted, marginTop: 2 },
   canalBadge: { alignSelf: 'flex-start', marginTop: 4, backgroundColor: 'rgba(98,38,50,0.08)', borderRadius: 6, paddingHorizontal: 8, paddingVertical: 2 },
   canalBadgeText: { fontSize: 10, color: '#622632', fontWeight: '600' },
-  ventaMonto: { fontSize: 15, fontWeight: '700', color: COLORS.textPrimary },
+  ventaMonto: { fontSize: 13, fontWeight: '700', color: COLORS.textPrimary },
 
   emptyCard: { backgroundColor: COLORS.surface, borderRadius: 14, padding: 24, borderWidth: 1, borderColor: COLORS.border, alignItems: 'center' },
   emptyText: { color: COLORS.textMuted, fontSize: 13 },
@@ -242,6 +329,7 @@ const styles = StyleSheet.create({
   fabPrimaryText: { color: COLORS.surface, fontSize: 13, fontWeight: '600' },
   fabSecondary: { flex: 1, backgroundColor: COLORS.surface, borderRadius: 12, paddingVertical: 13, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: 'rgba(98,38,50,0.2)' },
   fabSecondaryText: { color: COLORS.textPrimary, fontSize: 13, fontWeight: '600' },
+
   yearEndBanner: { backgroundColor: '#FFF0EE', borderRadius: 14, padding: 14, borderWidth: 1.5, borderColor: '#622632', marginBottom: 12, flexDirection: 'row', alignItems: 'center', gap: 10 },
   yearEndIcon: { fontSize: 24 },
   yearEndTitle: { fontSize: 13, fontWeight: '600', color: '#622632', marginBottom: 2 },
