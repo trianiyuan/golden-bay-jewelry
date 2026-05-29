@@ -14,6 +14,8 @@ import { getResumenMes } from '../../lib/queries/finances';
 import { Venta, Producto, ResumenMes } from '../../types';
 import { supabase } from '../../lib/supabase';
 import { useAuthStore } from '../../stores/authStore';
+import { getResumenUltimosMeses } from '../../lib/queries/finances';
+
 
 // ─── Modal cerrar sesión ──────────────────────────────────────
 function SignOutModal({ visible, onCancel, onConfirm }: {
@@ -79,6 +81,48 @@ function SettingsButton() {
   );
 }
 
+function AreaChart({ data }: { data: ResumenMes[] }) {
+  const W = 320, H = 55;
+  const values = data.map(h => Math.max(h.ganancia, 0));
+  const max = Math.max(...values, 1);
+  const pts = values.map((v, i) => ({
+    x: 6 + (i / (values.length - 1)) * (W - 12),
+    y: H - (v / max) * (H - 10),
+  }));
+  const line = pts.map((p, i) => `${i === 0 ? 'M' : 'L'}${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ');
+  const area = `${line} L${W},${H} L0,${H} Z`;
+  const months = data.map(h => {
+    const d = new Date(h.mes + '-15');
+    return d.toLocaleDateString('es-CR', { month: 'short' });
+  });
+
+  return (
+    <View>
+      <svg viewBox={`0 0 ${W} ${H + 22}`} style={{ width: '100%', height: 'auto' }}>
+        {/* guías punteadas */}
+        {[0.33, 0.66, 1].map((f, i) => (
+          <line key={i} x1="0" x2={W} y1={H - f * (H - 10)} y2={H - f * (H - 10)}
+            stroke="rgba(226,196,154,0.15)" strokeWidth="1" strokeDasharray="3 5" />
+        ))}
+        {/* área */}
+        <path d={area} fill="rgba(226,196,154,0.18)" />
+        {/* línea */}
+        <path d={line} fill="none" stroke={colors.goldSoft} strokeWidth="0.8" strokeLinejoin="round" strokeLinecap="round" />
+        {/* punto activo */}
+        <circle cx={pts[pts.length - 1].x} cy={pts[pts.length - 1].y} r="4"
+          fill={colors.wine2} stroke="white" strokeWidth="2" />
+        {/* labels meses */}
+        {months.map((m, i) => (
+          <text key={i} x={pts[i].x} y={H + 14}
+            textAnchor={i === 0 ? 'start' : i === months.length - 1 ? 'end' : 'middle'}
+            fontSize="6" fontFamily="'CormorantGaramond-Regular',sans-serif"
+            fill="rgba(255, 255, 255, 0.65)">{m}</text>
+        ))}
+      </svg>
+    </View>
+  );
+}
+
 // ─── Pantalla principal ───────────────────────────────────────
 export default function DashboardScreen() {
   const router = useRouter();
@@ -90,16 +134,19 @@ export default function DashboardScreen() {
   const [calcPrecio, setCalcPrecio] = useState('');
   const [calcPct, setCalcPct] = useState('30');
   const hoy = new Date();
+  const [historico, setHistorico] = useState<ResumenMes[]>([]);
 
   const cargar = useCallback(() => {
     async function fetchData() {
       try {
-        const [v, sb, r, p] = await Promise.all([
+        const [v, sb, r, p, h] = await Promise.all([
           getVentas(hoy),
           getProductosStockBajo(3),
           getResumenMes(hoy.getFullYear(), hoy.getMonth()),
           getProductos(),
+          getResumenUltimosMeses(12, hoy),
         ]);
+        setHistorico(h);
         setVentas(v);
         setStockBajo(sb);
         setResumen(r);
@@ -170,6 +217,13 @@ export default function DashboardScreen() {
               <Text> · margen del {ingresos > 0 ? Math.round((ganancia / ingresos) * 100) : 0} % este mes</Text>
             )}
           </Text>
+
+          {/* Gráfico de ganancia */}
+          {historico.length > 1 && (
+            <View style={{ marginTop: 18 }}>
+              <AreaChart data={historico} />
+            </View>
+          )}
         </LinearGradient>
 
         {/* ── Métricas 3 tiles ── */}
@@ -445,7 +499,7 @@ const styles = StyleSheet.create({
   hero: {
     borderRadius: radius.hero,
     padding: 28,
-    overflow: 'hidden',
+    overflow: 'visible',
   },
   heroFrame: {
     position: 'absolute',

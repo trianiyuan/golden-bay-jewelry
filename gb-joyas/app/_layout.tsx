@@ -109,7 +109,7 @@ export default function RootLayout() {
 const styles = StyleSheet.create({
   outerContainer: {
     flex: 1,
-    backgroundColor: '#E8D2B9', // --sand
+    backgroundColor: '#C4A882' , // --sand
     alignItems: 'center',
   },
   innerContainer: {
