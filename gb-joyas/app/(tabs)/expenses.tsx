@@ -148,46 +148,50 @@ export default function ExpensesScreen() {
         )}
       </ScrollView>
 
-      <Modal visible={modalAgregar} animationType="slide" presentationStyle="pageSheet">
-        <SafeAreaView style={styles.modal}>
-          <View style={styles.modalHeader}>
-            <TouchableOpacity onPress={() => { setModalAgregar(false); setGastoEditando(null); reset(); }}>
-              <Text style={styles.modalCancelar}>Cancelar</Text>
-            </TouchableOpacity>
-            <Text style={styles.modalTitulo}>{gastoEditando ? 'Editar gasto' : 'Nuevo gasto'}</Text>
-            <TouchableOpacity onPress={handleSubmit(guardar)} disabled={saving}>
-              {saving ? <ActivityIndicator color={COLORS.wine} size="small" /> : <Text style={styles.modalGuardar}>Guardar</Text>}
-            </TouchableOpacity>
-          </View>
-          <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.content}>
-            <Text style={styles.fieldLabel}>CATEGORÍA</Text>
-            <View style={styles.catGrid}>
-              {categorias.map(c => (
-                <TouchableOpacity key={c.id} style={[styles.catChip, catSeleccionada === c.id && styles.catChipActive]} onPress={() => setCatSeleccionada(c.id)}>
-                  <Text style={[styles.catChipText, catSeleccionada === c.id && styles.catChipTextActive]}>{c.nombre}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-            <Controller control={control} name="monto"
-              rules={{ required: 'El monto es obligatorio', pattern: { value: /^\d+(\.\d{1,2})?$/, message: 'Monto inválido' } }}
-              render={({ field: { onChange, value } }) => (
-                <Input label="Monto (₡)" value={value} onChangeText={v => onChange(v.replace(/[^0-9.]/g, ''))}
-                  keyboardType="numeric" placeholder="45000" error={errors.monto?.message} />
-              )} />
-            <Controller control={control} name="notas"
-              render={({ field: { onChange, value } }) => (
-                <Input label="Notas (opcional)" value={value} onChangeText={onChange}
-                  placeholder="Ej: compré 10 pares a la proveedora" multiline numberOfLines={3} style={{ height: 80, textAlignVertical: 'top' }} />
-              )} />
-            {gastoEditando && (
-              <TouchableOpacity style={styles.btnEliminarModal} onPress={() => { setModalAgregar(false); setGastoAEliminar(gastoEditando); setGastoEditando(null); }}>
-                <Text style={styles.btnEliminarModalText}>🗑 Eliminar este gasto</Text>
+      {/* Modal agregar/editar gasto */}
+      <Modal visible={modalAgregar} animationType="fade" transparent>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalBox}>
+            <View style={styles.modalHeader}>
+              <TouchableOpacity onPress={() => { setModalAgregar(false); setGastoEditando(null); reset(); }}>
+                <Text style={styles.modalCancelar}>Cancelar</Text>
               </TouchableOpacity>
-            )}
-          </ScrollView>
-        </SafeAreaView>
+              <Text style={styles.modalTitulo}>{gastoEditando ? 'Editar gasto' : 'Nuevo gasto'}</Text>
+              <TouchableOpacity onPress={handleSubmit(guardar)} disabled={saving}>
+                {saving ? <ActivityIndicator color={COLORS.wine} size="small" /> : <Text style={styles.modalGuardar}>Guardar</Text>}
+              </TouchableOpacity>
+            </View>
+            <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.content}>
+              <Text style={styles.fieldLabel}>CATEGORÍA</Text>
+              <View style={styles.catGrid}>
+                {categorias.map(c => (
+                  <TouchableOpacity key={c.id} style={[styles.catChip, catSeleccionada === c.id && styles.catChipActive]} onPress={() => setCatSeleccionada(c.id)}>
+                    <Text style={[styles.catChipText, catSeleccionada === c.id && styles.catChipTextActive]}>{c.nombre}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+              <Controller control={control} name="monto"
+                rules={{ required: 'El monto es obligatorio', pattern: { value: /^\d+(\.\d{1,2})?$/, message: 'Monto inválido' } }}
+                render={({ field: { onChange, value } }) => (
+                  <Input label="Monto (₡)" value={value} onChangeText={v => onChange(v.replace(/[^0-9.]/g, ''))}
+                    keyboardType="numeric" placeholder="45000" error={errors.monto?.message} />
+                )} />
+              <Controller control={control} name="notas"
+                render={({ field: { onChange, value } }) => (
+                  <Input label="Notas (opcional)" value={value} onChangeText={onChange}
+                    placeholder="Ej: compré 10 pares a la proveedora" multiline numberOfLines={3} style={{ height: 80, textAlignVertical: 'top' }} />
+                )} />
+              {gastoEditando && (
+                <TouchableOpacity style={styles.btnEliminarModal} onPress={() => { setModalAgregar(false); setGastoAEliminar(gastoEditando); setGastoEditando(null); }}>
+                  <Text style={styles.btnEliminarModalText}>🗑 Eliminar este gasto</Text>
+                </TouchableOpacity>
+              )}
+            </ScrollView>
+          </View>
+        </View>
       </Modal>
 
+      {/* Modal confirmar eliminar */}
       <Modal visible={!!gastoAEliminar} animationType="fade" transparent>
         <View style={styles.confirmOverlay}>
           <View style={styles.confirmBox}>
@@ -243,7 +247,10 @@ const styles = StyleSheet.create({
   empty: { alignItems: 'center', paddingTop: 60, gap: 12 },
   emptyIcon: { fontSize: 48 },
   emptyText: { fontSize: 14, color: COLORS.textMuted, textTransform: 'capitalize' },
-  modal: { flex: 1, backgroundColor: COLORS.background },
+
+  // Modal agregar/editar
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', alignItems: 'center', padding: 24 },
+  modalBox: { backgroundColor: COLORS.background, borderRadius: 20, width: '100%', maxWidth: 560, maxHeight: '85%', overflow: 'hidden' },
   modalHeader: { backgroundColor: COLORS.surface, paddingHorizontal: SIZES.xl, paddingVertical: SIZES.lg, borderBottomWidth: 1, borderBottomColor: 'rgba(232,200,184,0.6)', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   modalCancelar: { fontSize: 14, color: COLORS.textMuted, fontWeight: '500' },
   modalTitulo: { fontSize: 15, fontWeight: '600', color: COLORS.textPrimary },
@@ -256,8 +263,10 @@ const styles = StyleSheet.create({
   catChipTextActive: { color: COLORS.surface },
   btnEliminarModal: { marginTop: 24, padding: 14, borderRadius: 12, borderWidth: 1, borderColor: 'rgba(232,200,184,0.6)', alignItems: 'center' },
   btnEliminarModalText: { fontSize: 13, color: COLORS.textMuted, fontWeight: '500' },
-  confirmOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', padding: 24 },
-  confirmBox: { backgroundColor: '#FFF1ED', borderRadius: 20, padding: 24, shadowColor: '#000', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.15, shadowRadius: 24 },
+
+  // Modal confirmar eliminar
+  confirmOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', alignItems: 'center', padding: 24 },
+  confirmBox: { backgroundColor: '#FFF1ED', borderRadius: 20, padding: 24, maxWidth: 480, width: '100%', alignSelf: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.15, shadowRadius: 24 },
   confirmTitulo: { fontSize: 16, fontWeight: '700', color: COLORS.textPrimary, marginBottom: 8 },
   confirmMensaje: { fontSize: 13, color: COLORS.textMuted, marginBottom: 24, lineHeight: 20 },
   confirmBtns: { flexDirection: 'row', gap: 10 },

@@ -301,7 +301,7 @@ export default function FinancesScreen() {
                 <View style={styles.barTrack}>
                   <View style={[styles.barFill, { width: `${pct}%` }, mesActual && styles.barFillActive]} />
                 </View>
-                <Text style={[styles.barValue, mesActual && styles.barValueActive]}>₡{Math.round(h.ganancia / 1000)}k</Text>
+                <Text style={[styles.barValue, mesActual && styles.barValueActive]}>₡{h.ganancia.toLocaleString('es-CR')}</Text>
               </View>
             );
           })}
@@ -504,7 +504,7 @@ const styles = StyleSheet.create({
   barTrack: { flex: 1, height: 8, backgroundColor: '#F5E8E0', borderRadius: 4, overflow: 'hidden' },
   barFill: { height: '100%', backgroundColor: '#ECABA0', borderRadius: 4 },
   barFillActive: { backgroundColor: '#622632' },
-  barValue: { fontSize: 11, color: COLORS.textMuted, width: 34 },
+  barValue: { fontSize: 11, color: COLORS.textMuted, width: 70, textAlign: 'right' },
   barValueActive: { color: COLORS.wine, fontWeight: '600' },
   gastoRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 },
   gastoNombre: { fontSize: 11, color: COLORS.textMuted, width: 90 },
