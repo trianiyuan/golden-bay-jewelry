@@ -1,11 +1,11 @@
-// app/settings.tsx
+// app/settings.tsx — Boutique theme
 import React, { useEffect, useState } from 'react';
 import {
   View, Text, SafeAreaView, StyleSheet, ScrollView,
   TouchableOpacity, TextInput, Modal, ActivityIndicator,
 } from 'react-native';
 import { Header } from '../components/ui/Header';
-import { COLORS, SIZES } from '../constants/colors';
+import { colors, fonts, radius } from '../constants/theme';
 import { supabase } from '../lib/supabase';
 import { getCategorias, getTallasPorCategoria } from '../lib/queries/products';
 
@@ -25,6 +25,7 @@ export default function SettingsScreen() {
     parentId?: string;
     parentNombre?: string;
   }>({ visible: false, tipo: 'categoria' });
+
   const [inputNombre, setInputNombre] = useState('');
   const [inputComision, setInputComision] = useState('');
   const [inputCostoFijo, setInputCostoFijo] = useState('');
@@ -64,49 +65,30 @@ export default function SettingsScreen() {
     setSaving(true);
     try {
       const { tipo, item, parentId } = modal;
-
       if (tipo === 'categoria') {
-        if (item) {
-          await supabase.from('categorias').update({ nombre: inputNombre.trim() }).eq('id', item.id);
-        } else {
-          await supabase.from('categorias').insert({ nombre: inputNombre.trim(), unidad: 'unidad' });
-        }
+        if (item) await supabase.from('categorias').update({ nombre: inputNombre.trim() }).eq('id', item.id);
+        else await supabase.from('categorias').insert({ nombre: inputNombre.trim(), unidad: 'unidad' });
       } else if (tipo === 'canal') {
-        if (item) {
-          await supabase.from('canales_venta').update({
-            nombre: inputNombre.trim(),
-            comision_porcentaje: parseFloat(inputComision) || 0,
-            costo_fijo_mensual: parseFloat(inputCostoFijo) || 0,
-          }).eq('id', item.id);
-        } else {
-          await supabase.from('canales_venta').insert({
-            nombre: inputNombre.trim(),
-            activo: true,
-            es_editable: true,
-            comision_porcentaje: parseFloat(inputComision) || 0,
-            costo_fijo_mensual: parseFloat(inputCostoFijo) || 0,
-          });
-        }
+        const data = {
+          nombre: inputNombre.trim(),
+          comision_porcentaje: parseFloat(inputComision) || 0,
+          costo_fijo_mensual: parseFloat(inputCostoFijo) || 0,
+        };
+        if (item) await supabase.from('canales_venta').update(data).eq('id', item.id);
+        else await supabase.from('canales_venta').insert({ ...data, activo: true, es_editable: true });
       } else if (tipo === 'gasto') {
-        if (item) {
-          await supabase.from('categorias_gasto').update({ nombre: inputNombre.trim() }).eq('id', item.id);
-        } else {
-          await supabase.from('categorias_gasto').insert({ nombre: inputNombre.trim(), es_editable: true });
-        }
+        if (item) await supabase.from('categorias_gasto').update({ nombre: inputNombre.trim() }).eq('id', item.id);
+        else await supabase.from('categorias_gasto').insert({ nombre: inputNombre.trim(), es_editable: true });
       } else if (tipo === 'talla' && parentId) {
-        if (item) {
-          await supabase.from('tallas_por_categoria').update({ valor: inputNombre.trim() }).eq('id', item.id);
-        } else {
+        if (item) await supabase.from('tallas_por_categoria').update({ valor: inputNombre.trim() }).eq('id', item.id);
+        else {
           const tallasCat = tallasPorCat[parentId] || [];
           await supabase.from('tallas_por_categoria').insert({
-            categoria_id: parentId,
-            valor: inputNombre.trim(),
-            orden: tallasCat.length + 1,
+            categoria_id: parentId, valor: inputNombre.trim(), orden: tallasCat.length + 1,
           });
         }
         await cargarTallas(parentId);
       }
-
       await cargar();
       setModal({ visible: false, tipo: 'categoria' });
     } finally { setSaving(false); }
@@ -117,7 +99,7 @@ export default function SettingsScreen() {
     setSaving(true);
     try {
       const { tipo, item, parentId } = modal;
-      if (tipo === 'categoria') await supabase.from('categorias').delete().eq('id', item!.id);
+      if (tipo === 'categoria')  await supabase.from('categorias').delete().eq('id', item!.id);
       else if (tipo === 'canal') await supabase.from('canales_venta').delete().eq('id', item!.id);
       else if (tipo === 'gasto') await supabase.from('categorias_gasto').delete().eq('id', item!.id);
       else if (tipo === 'talla') {
@@ -138,7 +120,7 @@ export default function SettingsScreen() {
     <SafeAreaView style={styles.safe}>
       <Header showBack title="Configuración" />
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-        <ActivityIndicator color={COLORS.wine} />
+        <ActivityIndicator color={colors.wine} />
       </View>
     </SafeAreaView>
   );
@@ -148,13 +130,11 @@ export default function SettingsScreen() {
       <Header showBack title="Configuración" />
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
 
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>CATEGORÍAS</Text>
-            <TouchableOpacity style={styles.addBtn} onPress={() => abrirModal('categoria')}>
-              <Text style={styles.addBtnText}>+ Agregar</Text>
-            </TouchableOpacity>
-          </View>
+        {/* ── Categorías ── */}
+        <Section
+          title="CATEGORÍAS"
+          onAdd={() => abrirModal('categoria')}
+        >
           {categorias.map(cat => (
             <View key={cat.id}>
               <View style={styles.item}>
@@ -178,11 +158,11 @@ export default function SettingsScreen() {
               </View>
 
               {expandedCat === cat.id && (
-                <View style={styles.tallasContainer}>
+                <View style={styles.tallasWrap}>
                   <View style={styles.tallasHeader}>
                     <Text style={styles.tallasTitle}>Tallas de {cat.nombre}</Text>
-                    <TouchableOpacity style={styles.addBtn} onPress={() => abrirModal('talla', undefined, cat.id, cat.nombre)}>
-                      <Text style={styles.addBtnText}>+ Talla</Text>
+                    <TouchableOpacity style={styles.addBtnSmall} onPress={() => abrirModal('talla', undefined, cat.id, cat.nombre)}>
+                      <Text style={styles.addBtnSmallText}>+ Talla</Text>
                     </TouchableOpacity>
                   </View>
                   {(tallasPorCat[cat.id] || []).map(t => (
@@ -200,24 +180,19 @@ export default function SettingsScreen() {
               )}
             </View>
           ))}
-        </View>
+        </Section>
 
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>CANALES DE VENTA</Text>
-            <TouchableOpacity style={styles.addBtn} onPress={() => abrirModal('canal')}>
-              <Text style={styles.addBtnText}>+ Agregar</Text>
-            </TouchableOpacity>
-          </View>
+        {/* ── Canales de venta ── */}
+        <Section title="CANALES DE VENTA" onAdd={() => abrirModal('canal')}>
           {canales.map(canal => (
             <View key={canal.id} style={styles.item}>
               <View style={{ flex: 1 }}>
-                <Text style={[styles.itemNombre, !canal.activo && { color: COLORS.textMuted }]}>
+                <Text style={[styles.itemNombre, !canal.activo && { color: colors.muted }]}>
                   {canal.nombre}
                   {!canal.activo && <Text style={styles.inactivo}> (inactivo)</Text>}
                 </Text>
                 {(canal.comision_porcentaje > 0 || canal.costo_fijo_mensual > 0) && (
-                  <Text style={styles.comisionBadge}>
+                  <Text style={styles.comisionText}>
                     {canal.comision_porcentaje > 0 ? `Comisión: ${canal.comision_porcentaje}%` : ''}
                     {canal.comision_porcentaje > 0 && canal.costo_fijo_mensual > 0 ? ' · ' : ''}
                     {canal.costo_fijo_mensual > 0 ? `Fijo: ₡${Number(canal.costo_fijo_mensual).toLocaleString('es-CR')}/mes` : ''}
@@ -225,8 +200,8 @@ export default function SettingsScreen() {
                 )}
               </View>
               <View style={styles.itemActions}>
-                <TouchableOpacity onPress={() => toggleCanal(canal)} style={styles.toggleBtn}>
-                  <Text style={[styles.toggleText, { color: canal.activo ? COLORS.textMuted : COLORS.wine }]}>
+                <TouchableOpacity onPress={() => toggleCanal(canal)}>
+                  <Text style={[styles.toggleText, { color: canal.activo ? colors.muted : colors.wine }]}>
                     {canal.activo ? 'Desactivar' : 'Activar'}
                   </Text>
                 </TouchableOpacity>
@@ -236,15 +211,10 @@ export default function SettingsScreen() {
               </View>
             </View>
           ))}
-        </View>
+        </Section>
 
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>CATEGORÍAS DE GASTO</Text>
-            <TouchableOpacity style={styles.addBtn} onPress={() => abrirModal('gasto')}>
-              <Text style={styles.addBtnText}>+ Agregar</Text>
-            </TouchableOpacity>
-          </View>
+        {/* ── Categorías de gasto ── */}
+        <Section title="CATEGORÍAS DE GASTO" onAdd={() => abrirModal('gasto')}>
           {categoriasGasto.map(g => (
             <View key={g.id} style={styles.item}>
               <Text style={styles.itemNombre}>{g.nombre}</Text>
@@ -253,64 +223,71 @@ export default function SettingsScreen() {
               </TouchableOpacity>
             </View>
           ))}
-        </View>
+        </Section>
 
         <View style={{ height: 40 }} />
       </ScrollView>
 
+      {/* ── Modal editar/agregar ── */}
       <Modal visible={modal.visible} transparent animationType="fade">
         <View style={styles.modalOverlay}>
           <View style={styles.modalCard}>
             <Text style={styles.modalTitle}>
               {modal.item ? 'Editar' : 'Agregar'}{' '}
-              {modal.tipo === 'categoria' ? 'categoría' :
-               modal.tipo === 'canal' ? 'canal de venta' :
-               modal.tipo === 'gasto' ? 'categoría de gasto' :
-               `talla — ${modal.parentNombre}`}
+              {modal.tipo === 'categoria' ? 'categoría'
+                : modal.tipo === 'canal' ? 'canal de venta'
+                : modal.tipo === 'gasto' ? 'categoría de gasto'
+                : `talla — ${modal.parentNombre}`}
             </Text>
+
+            <Text style={styles.fieldLabel}>NOMBRE</Text>
             <TextInput
               style={styles.modalInput}
               value={inputNombre}
               onChangeText={setInputNombre}
               placeholder="Nombre..."
-              placeholderTextColor={COLORS.textMuted}
+              placeholderTextColor={colors.muted2}
               autoFocus
             />
+
             {modal.tipo === 'canal' && (
               <>
-                <Text style={styles.fieldLabel}>COMISIÓN DEL CANAL (%)</Text>
-                <Text style={styles.fieldHint}>Si el canal cobra una comisión sobre la venta, ingresá el porcentaje. Dejá 0 si no aplica.</Text>
+                <Text style={styles.fieldLabel}>COMISIÓN (%)</Text>
+                <Text style={styles.fieldHint}>Si el canal cobra comisión sobre la venta. Dejá 0 si no aplica.</Text>
                 <TextInput
                   style={styles.modalInput}
                   value={inputComision}
                   onChangeText={setInputComision}
                   placeholder="Ej: 30"
-                  placeholderTextColor={COLORS.textMuted}
+                  placeholderTextColor={colors.muted2}
                   keyboardType="numeric"
                 />
                 <Text style={styles.fieldLabel}>COSTO FIJO MENSUAL (₡)</Text>
-                <Text style={styles.fieldHint}>Si el canal cobra un monto fijo por mes (ej: alquiler de espacio), ingresalo aquí.</Text>
+                <Text style={styles.fieldHint}>Si el canal cobra un monto fijo por mes.</Text>
                 <TextInput
                   style={styles.modalInput}
                   value={inputCostoFijo}
                   onChangeText={setInputCostoFijo}
-                  placeholder="Ej: 10000"
-                  placeholderTextColor={COLORS.textMuted}
+                  placeholder="Ej: 10 000"
+                  placeholderTextColor={colors.muted2}
                   keyboardType="numeric"
                 />
               </>
             )}
+
             <TouchableOpacity style={styles.modalBtnPrimary} onPress={guardar} disabled={saving}>
               {saving
-                ? <ActivityIndicator color="#FFF1ED" size="small" />
+                ? <ActivityIndicator color={colors.paper} size="small" />
                 : <Text style={styles.modalBtnPrimaryText}>{modal.item ? 'Guardar cambios' : 'Agregar'}</Text>
               }
             </TouchableOpacity>
+
             {modal.item && (
               <TouchableOpacity style={styles.modalBtnDelete} onPress={eliminar} disabled={saving}>
                 <Text style={styles.modalBtnDeleteText}>Eliminar</Text>
               </TouchableOpacity>
             )}
+
             <TouchableOpacity style={styles.modalBtnCancel} onPress={() => setModal({ visible: false, tipo: 'categoria' })}>
               <Text style={styles.modalBtnCancelText}>Cancelar</Text>
             </TouchableOpacity>
@@ -321,42 +298,242 @@ export default function SettingsScreen() {
   );
 }
 
+// ── Section wrapper ────────────────────────────────────────────
+function Section({ title, onAdd, children }: { title: string; onAdd: () => void; children: React.ReactNode }) {
+  return (
+    <View style={styles.section}>
+      <View style={styles.sectionHeader}>
+        <Text style={styles.sectionTitle}>{title}</Text>
+        <TouchableOpacity style={styles.addBtnSmall} onPress={onAdd}>
+          <Text style={styles.addBtnSmallText}>+ Agregar</Text>
+        </TouchableOpacity>
+      </View>
+      {children}
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: COLORS.background },
-  scroll: { flex: 1 },
-  content: { padding: SIZES.lg },
-  section: { backgroundColor: COLORS.surface, borderRadius: SIZES.radiusLg, borderWidth: 1, borderColor: COLORS.border, marginBottom: 16, overflow: 'hidden' },
-  sectionHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 14, borderBottomWidth: 1, borderBottomColor: COLORS.border, backgroundColor: COLORS.surfaceAlt },
-  sectionTitle: { fontSize: 11, fontWeight: '600', color: COLORS.textMuted, letterSpacing: 0.8 },
-  addBtn: { backgroundColor: COLORS.wine, borderRadius: SIZES.radiusSm, paddingHorizontal: 10, paddingVertical: 4 },
-  addBtnText: { fontSize: 12, color: '#FFF1ED', fontWeight: '600' },
-  item: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 14, borderBottomWidth: 1, borderBottomColor: COLORS.border },
-  itemExpand: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8, paddingRight: 12 },
-  itemNombre: { fontSize: 14, color: COLORS.textPrimary, flex: 1 },
-  expandIcon: { fontSize: 10, color: COLORS.textMuted },
+  safe:    { flex: 1, backgroundColor: '#F0E8DF' },
+  scroll:  { flex: 1 },
+  content: { padding: 20 },
+
+  // ── Sección ───────────────────────────────────────────────
+  section: {
+    backgroundColor: colors.cream,
+    borderRadius: radius.card,
+    borderWidth: 1,
+    borderColor: colors.line,
+    marginBottom: 16,
+    overflow: 'hidden',
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.line,
+    backgroundColor: colors.paper,
+  },
+  sectionTitle: {
+    fontFamily: fonts.sansBold,
+    fontSize: 10,
+    color: colors.muted,
+    letterSpacing: 1.2,
+    textTransform: 'uppercase',
+  },
+  addBtnSmall: {
+    backgroundColor: colors.wine,
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+  },
+  addBtnSmallText: {
+    fontFamily: fonts.sansSemiBold,
+    fontSize: 12,
+    color: colors.paper,
+  },
+
+  // ── Items ─────────────────────────────────────────────────
+  item: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.line,
+  },
+  itemExpand: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingRight: 12,
+  },
+  itemNombre: {
+    fontFamily: fonts.sansMedium,
+    fontSize: 14,
+    color: colors.ink,
+    flex: 1,
+  },
+  expandIcon: {
+    fontFamily: fonts.sansRegular,
+    fontSize: 10,
+    color: colors.muted,
+  },
   itemActions: { flexDirection: 'row', gap: 10, alignItems: 'center' },
-  editBtn: { backgroundColor: COLORS.surfaceAlt, borderRadius: SIZES.radiusSm, paddingHorizontal: 10, paddingVertical: 4, borderWidth: 1, borderColor: COLORS.border, marginLeft: 8 },
-  editBtnText: { fontSize: 12, color: COLORS.wine, fontWeight: '500' },
-  toggleBtn: { paddingHorizontal: 8, paddingVertical: 4 },
-  toggleText: { fontSize: 12, fontWeight: '500' },
-  inactivo: { fontSize: 12, color: COLORS.textMuted },
-  comisionBadge: { fontSize: 11, color: COLORS.wine, marginTop: 2 },
-  tallasContainer: { backgroundColor: '#FFF8F5', padding: 12, borderBottomWidth: 1, borderBottomColor: COLORS.border },
-  tallasHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
-  tallasTitle: { fontSize: 12, fontWeight: '600', color: COLORS.textMuted },
-  tallaItem: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 6, paddingHorizontal: 4, borderBottomWidth: 1, borderBottomColor: COLORS.border },
-  tallaValor: { fontSize: 13, color: COLORS.textPrimary },
-  emptyText: { fontSize: 12, color: COLORS.textMuted, fontStyle: 'italic', paddingVertical: 8 },
-  fieldLabel: { fontSize: 11, fontWeight: '600', color: COLORS.textMuted, marginBottom: 4, letterSpacing: 0.5 },
-  fieldHint: { fontSize: 11, color: COLORS.textMuted, marginBottom: 8, lineHeight: 16 },
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(26,10,10,0.45)', alignItems: 'center', justifyContent: 'center', padding: 32 },
-  modalCard: { backgroundColor: '#FFF1ED', borderRadius: 20, padding: 24, width: '100%', maxWidth: 340, borderWidth: 1, borderColor: '#E8C8B8' },
-  modalTitle: { fontSize: 16, fontWeight: '600', color: COLORS.textPrimary, marginBottom: 16 },
-  modalInput: { backgroundColor: COLORS.surface, borderWidth: 1, borderColor: COLORS.border, borderRadius: SIZES.radiusMd, padding: 12, fontSize: 14, color: COLORS.textPrimary, marginBottom: 12 },
-  modalBtnPrimary: { backgroundColor: COLORS.wine, borderRadius: SIZES.radiusMd, paddingVertical: 12, alignItems: 'center', marginBottom: 8 },
-  modalBtnPrimaryText: { color: '#FFF1ED', fontSize: 14, fontWeight: '600' },
-  modalBtnDelete: { borderWidth: 1, borderColor: '#E8C8B8', borderRadius: SIZES.radiusMd, paddingVertical: 12, alignItems: 'center', marginBottom: 8 },
-  modalBtnDeleteText: { color: COLORS.wine, fontSize: 14, fontWeight: '500' },
-  modalBtnCancel: { paddingVertical: 12, alignItems: 'center' },
-  modalBtnCancelText: { color: COLORS.textMuted, fontSize: 14 },
+  editBtn: {
+    backgroundColor: colors.paper,
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderWidth: 1,
+    borderColor: colors.gold,
+    marginLeft: 8,
+  },
+  editBtnText: {
+    fontFamily: fonts.sansSemiBold,
+    fontSize: 12,
+    color: colors.wine,
+  },
+  toggleText: {
+    fontFamily: fonts.sansSemiBold,
+    fontSize: 12,
+  },
+  inactivo: {
+    fontFamily: fonts.sansRegular,
+    fontSize: 12,
+    color: colors.muted,
+  },
+  comisionText: {
+    fontFamily: fonts.sansRegular,
+    fontSize: 11,
+    color: colors.gold,
+    marginTop: 3,
+  },
+
+  // ── Tallas ────────────────────────────────────────────────
+  tallasWrap: {
+    backgroundColor: colors.sand,
+    padding: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.line,
+  },
+  tallasHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  tallasTitle: {
+    fontFamily: fonts.sansSemiBold,
+    fontSize: 12,
+    color: colors.muted,
+  },
+  tallaItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.line,
+  },
+  tallaValor: {
+    fontFamily: fonts.sansMedium,
+    fontSize: 13,
+    color: colors.ink,
+  },
+  emptyText: {
+    fontFamily: fonts.sansRegular,
+    fontSize: 12,
+    color: colors.muted,
+    fontStyle: 'italic',
+    paddingVertical: 8,
+  },
+
+  // ── Modal ─────────────────────────────────────────────────
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(44,26,28,0.55)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 32,
+  },
+  modalCard: {
+    backgroundColor: colors.cream,
+    borderRadius: 20,
+    padding: 24,
+    width: '100%',
+    maxWidth: 380,
+    borderWidth: 1,
+    borderColor: colors.line,
+  },
+  modalTitle: {
+    fontFamily: fonts.serifSemiBold,
+    fontSize: 22,
+    color: colors.ink,
+    marginBottom: 18,
+  },
+  fieldLabel: {
+    fontFamily: fonts.sansBold,
+    fontSize: 10,
+    color: colors.muted,
+    letterSpacing: 1.2,
+    textTransform: 'uppercase',
+    marginBottom: 6,
+    marginTop: 4,
+  },
+  fieldHint: {
+    fontFamily: fonts.sansRegular,
+    fontSize: 11,
+    color: colors.muted,
+    marginBottom: 8,
+    lineHeight: 16,
+  },
+  modalInput: {
+    backgroundColor: colors.paper,
+    borderWidth: 1,
+    borderColor: colors.lineStrong,
+    borderRadius: radius.input,
+    padding: 14,
+    fontFamily: fonts.sansRegular,
+    fontSize: 15,
+    color: colors.ink,
+    marginBottom: 14,
+  },
+  modalBtnPrimary: {
+    backgroundColor: colors.wine,
+    borderRadius: radius.button,
+    paddingVertical: 14,
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  modalBtnPrimaryText: {
+    fontFamily: fonts.sansSemiBold,
+    color: colors.paper,
+    fontSize: 14,
+  },
+  modalBtnDelete: {
+    borderWidth: 1,
+    borderColor: colors.goldLine,
+    borderRadius: radius.button,
+    paddingVertical: 14,
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  modalBtnDeleteText: {
+    fontFamily: fonts.sansSemiBold,
+    color: colors.wine,
+    fontSize: 14,
+  },
+  modalBtnCancel: {
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  modalBtnCancelText: {
+    fontFamily: fonts.sansMedium,
+    color: colors.muted,
+    fontSize: 14,
+  },
 });

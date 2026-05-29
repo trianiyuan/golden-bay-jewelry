@@ -1,4 +1,4 @@
-// app/(tabs)/expenses.tsx
+// app/(tabs)/expenses.tsx — Boutique theme
 import React, { useState, useCallback } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity,
@@ -6,9 +6,10 @@ import {
 } from 'react-native';
 import { useFocusEffect } from 'expo-router';
 import { useForm, Controller } from 'react-hook-form';
+import { LinearGradient } from 'expo-linear-gradient';
 import { getGastos, createGasto, updateGasto, eliminarGasto, getCategoriasGasto } from '../../lib/queries/sales';
 import { Gasto, CategoriaGasto } from '../../types';
-import { COLORS, SIZES } from '../../constants/colors';
+import { colors, fonts, radius } from '../../constants/theme';
 import { Input } from '../../components/ui/Input';
 import { PageHeader } from '../../components/ui/Header';
 import { format } from 'date-fns';
@@ -47,13 +48,15 @@ export default function ExpensesScreen() {
   }
 
   function abrirAgregar() {
-    setGastoEditando(null); reset({ monto: '', notas: '' });
+    setGastoEditando(null);
+    reset({ monto: '', notas: '' });
     if (categorias.length > 0) setCatSeleccionada(categorias[0].id);
     setModalAgregar(true);
   }
 
   function abrirEditar(gasto: Gasto) {
-    setGastoEditando(gasto); setCatSeleccionada(gasto.categoria_gasto_id);
+    setGastoEditando(gasto);
+    setCatSeleccionada(gasto.categoria_gasto_id);
     reset({ monto: String(gasto.monto), notas: gasto.notas || '' });
     setModalAgregar(true);
   }
@@ -63,92 +66,149 @@ export default function ExpensesScreen() {
     try {
       setSaving(true);
       if (gastoEditando) {
-        await updateGasto(gastoEditando.id, { monto: parseFloat(data.monto), notas: data.notas.trim() || undefined, categoria_gasto_id: catSeleccionada });
+        await updateGasto(gastoEditando.id, {
+          monto: parseFloat(data.monto),
+          notas: data.notas.trim() || undefined,
+          categoria_gasto_id: catSeleccionada,
+        });
       } else {
-        await createGasto({ monto: parseFloat(data.monto), notas: data.notas.trim() || undefined, categoria_gasto_id: catSeleccionada, fecha: new Date().toISOString().split('T')[0] });
+        await createGasto({
+          monto: parseFloat(data.monto),
+          notas: data.notas.trim() || undefined,
+          categoria_gasto_id: catSeleccionada,
+          fecha: new Date().toISOString().split('T')[0],
+        });
       }
       reset(); setModalAgregar(false); setGastoEditando(null); cargar();
-    } catch (e: any) { Alert.alert('Error', e.message); } finally { setSaving(false); }
+    } catch (e: any) {
+      Alert.alert('Error', e.message);
+    } finally { setSaving(false); }
   }
 
   async function ejecutarEliminar() {
     if (!gastoAEliminar) return;
     try {
-      await eliminarGasto(gastoAEliminar.id); setGastoAEliminar(null); cargar();
-    } catch (e: any) { setGastoAEliminar(null); Alert.alert('Error', e.message || 'No se pudo eliminar.'); }
+      await eliminarGasto(gastoAEliminar.id);
+      setGastoAEliminar(null); cargar();
+    } catch (e: any) {
+      setGastoAEliminar(null);
+      Alert.alert('Error', e.message || 'No se pudo eliminar.');
+    }
   }
 
   const totalMes = gastos.reduce((sum, g) => sum + Number(g.monto), 0);
   const porCategoria: Record<string, number> = {};
-  gastos.forEach(g => { const n = g.categoria?.nombre || 'Otros'; porCategoria[n] = (porCategoria[n] || 0) + Number(g.monto); });
+  gastos.forEach(g => {
+    const n = g.categoria?.nombre || 'Otros';
+    porCategoria[n] = (porCategoria[n] || 0) + Number(g.monto);
+  });
 
   return (
     <SafeAreaView style={styles.safe}>
       <PageHeader title="Gastos" rightElement={
-        <TouchableOpacity style={styles.btnAgregar} onPress={abrirAgregar} activeOpacity={0.85}>
-          <Text style={styles.btnAgregarText}>+ Agregar</Text>
+        <TouchableOpacity style={styles.btnAdd} onPress={abrirAgregar} activeOpacity={0.85}>
+          <Text style={styles.btnAddText}>+ Agregar</Text>
         </TouchableOpacity>
       } />
 
-      <View style={styles.mesSelector}>
-        <TouchableOpacity onPress={() => cambiarMes(-1)} style={styles.mesBtn}><Text style={styles.mesBtnText}>‹</Text></TouchableOpacity>
-        <Text style={styles.mesNombre}>{format(mes, 'MMMM yyyy', { locale: es })}</Text>
-        <TouchableOpacity onPress={() => cambiarMes(1)} style={styles.mesBtn}><Text style={styles.mesBtnText}>›</Text></TouchableOpacity>
+      {/* Selector de mes */}
+      <View style={styles.monthNav}>
+        <TouchableOpacity onPress={() => cambiarMes(-1)} style={styles.monthArrow}>
+          <Text style={styles.monthArrowText}>‹</Text>
+        </TouchableOpacity>
+        <Text style={styles.monthLabel}>{format(mes, 'MMMM yyyy', { locale: es })}</Text>
+        <TouchableOpacity onPress={() => cambiarMes(1)} style={styles.monthArrow}>
+          <Text style={styles.monthArrowText}>›</Text>
+        </TouchableOpacity>
       </View>
 
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
-        <View style={styles.totalCard}>
+
+        {/* Panel total vino */}
+        <LinearGradient
+          colors={['#6A2233', '#5A1B2B', '#3F1320']}
+          start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+          style={styles.totalPanel}
+        >
+          <View style={styles.totalFrame} pointerEvents="none" />
           <View>
-            <Text style={styles.totalLabel}>TOTAL GASTOS</Text>
+            <Text style={styles.totalEyebrow}>TOTAL GASTOS · {format(mes, 'MMMM', { locale: es }).toUpperCase()}</Text>
             <Text style={styles.totalMonto}>₡{totalMes.toLocaleString('es-CR')}</Text>
           </View>
-          <View style={styles.desglose}>
-            {Object.entries(porCategoria).map(([nombre, monto]) => (
-              <View key={nombre} style={styles.desgloseItem}>
-                <View style={styles.desgloseDot} />
-                <Text style={styles.desgloseNombre} numberOfLines={1}>{nombre}</Text>
-                <Text style={styles.desgloseMonto}>₡{Math.round(monto / 1000)}k</Text>
+          {Object.keys(porCategoria).length > 0 && (
+            <View style={styles.desglose}>
+              {Object.entries(porCategoria).map(([nombre, monto]) => (
+                <View key={nombre} style={styles.desgloseRow}>
+                  <View style={styles.desgloseDot} />
+                  <Text style={styles.desgloseNombre} numberOfLines={1}>{nombre}</Text>
+                  <Text style={styles.desgloseMonto}>₡{Math.round(monto / 1000)}k</Text>
+                </View>
+              ))}
+            </View>
+          )}
+        </LinearGradient>
+
+        {/* Historial */}
+        <Text style={styles.sectionTitle}>HISTORIAL</Text>
+
+        {gastos.length > 0 && (
+          <View style={styles.listCard}>
+            {gastos.map((gasto, i) => (
+              <View
+                key={gasto.id}
+                style={[styles.gastoRow, i === gastos.length - 1 && { borderBottomWidth: 0 }]}
+              >
+                {/* Ícono categoría */}
+                <View style={styles.gastoIcon}>
+                  <Text style={styles.gastoIconText}>
+                    {gasto.categoria?.nombre?.includes('Compra') ? '▽'
+                      : gasto.categoria?.nombre?.includes('Envío') ? '→'
+                      : gasto.categoria?.nombre?.includes('Empaque') ? '□'
+                      : '◇'}
+                  </Text>
+                </View>
+
+                {/* Info */}
+                <View style={styles.gastoInfo}>
+                  <Text style={styles.gastoCategoria}>{gasto.categoria?.nombre}</Text>
+                  {gasto.notas ? (
+                    <Text style={styles.gastoNota} numberOfLines={1}>"{gasto.notas}"</Text>
+                  ) : null}
+                  <Text style={styles.gastoFecha}>
+                    {format(new Date(gasto.fecha + 'T12:00:00'), 'd MMM yyyy', { locale: es })}
+                  </Text>
+                </View>
+
+                {/* Monto + acciones */}
+                <View style={styles.gastoRight}>
+                  <Text style={styles.gastoMonto}>
+                    ₡{Number(gasto.monto).toLocaleString('es-CR')}
+                  </Text>
+                  <View style={styles.gastoActions}>
+                    <TouchableOpacity style={styles.iconBtn} onPress={() => abrirEditar(gasto)}>
+                      <Text style={styles.iconBtnText}>✎</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity style={[styles.iconBtn, styles.iconBtnDanger]} onPress={() => setGastoAEliminar(gasto)}>
+                      <Text style={[styles.iconBtnText, { color: colors.wine }]}>⌫</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
               </View>
             ))}
           </View>
-        </View>
-
-        <Text style={styles.sectionTitle}>HISTORIAL</Text>
-        {gastos.map(gasto => (
-          <View key={gasto.id} style={styles.gastoCard}>
-            <View style={styles.gastoMain}>
-              <View style={styles.gastoIcon}>
-                <Text style={{ fontSize: 18 }}>
-                  {gasto.categoria?.nombre?.includes('Compra') ? '📦' : gasto.categoria?.nombre?.includes('Envío') ? '🚚' : gasto.categoria?.nombre?.includes('Empaque') ? '🎁' : '💰'}
-                </Text>
-              </View>
-              <View style={styles.gastoInfo}>
-                <Text style={styles.gastoCategoria}>{gasto.categoria?.nombre}</Text>
-                {gasto.notas ? <Text style={styles.gastoNota} numberOfLines={1}>{gasto.notas}</Text> : null}
-                <Text style={styles.gastoFecha}>{format(new Date(gasto.fecha + 'T12:00:00'), 'd MMM yyyy', { locale: es })}</Text>
-              </View>
-              <Text style={styles.gastoMonto}>₡{Number(gasto.monto).toLocaleString('es-CR')}</Text>
-            </View>
-            <View style={styles.gastoAcciones}>
-              <TouchableOpacity style={styles.btnEditar} onPress={() => abrirEditar(gasto)}>
-                <Text style={styles.btnEditarText}>✏️ Editar</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.btnEliminar} onPress={() => setGastoAEliminar(gasto)}>
-                <Text style={styles.btnEliminarText}>🗑 Eliminar</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        ))}
+        )}
 
         {gastos.length === 0 && !loading && (
           <View style={styles.empty}>
-            <Text style={styles.emptyIcon}>📋</Text>
-            <Text style={styles.emptyText}>No hay gastos en {format(mes, 'MMMM', { locale: es })}</Text>
+            <Text style={styles.emptyText}>
+              No hay gastos en {format(mes, 'MMMM', { locale: es })}
+            </Text>
           </View>
         )}
+
       </ScrollView>
 
-      {/* Modal agregar/editar gasto */}
+      {/* ════ MODAL AGREGAR/EDITAR ════ */}
       <Modal visible={modalAgregar} animationType="fade" transparent>
         <View style={styles.modalOverlay}>
           <View style={styles.modalBox}>
@@ -158,32 +218,54 @@ export default function ExpensesScreen() {
               </TouchableOpacity>
               <Text style={styles.modalTitulo}>{gastoEditando ? 'Editar gasto' : 'Nuevo gasto'}</Text>
               <TouchableOpacity onPress={handleSubmit(guardar)} disabled={saving}>
-                {saving ? <ActivityIndicator color={COLORS.wine} size="small" /> : <Text style={styles.modalGuardar}>Guardar</Text>}
+                {saving
+                  ? <ActivityIndicator color={colors.wine} size="small" />
+                  : <Text style={styles.modalGuardar}>Guardar</Text>
+                }
               </TouchableOpacity>
             </View>
-            <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.content}>
+
+            <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.modalBody}>
               <Text style={styles.fieldLabel}>CATEGORÍA</Text>
-              <View style={styles.catGrid}>
+              <View style={styles.pillsWrap}>
                 {categorias.map(c => (
-                  <TouchableOpacity key={c.id} style={[styles.catChip, catSeleccionada === c.id && styles.catChipActive]} onPress={() => setCatSeleccionada(c.id)}>
-                    <Text style={[styles.catChipText, catSeleccionada === c.id && styles.catChipTextActive]}>{c.nombre}</Text>
+                  <TouchableOpacity
+                    key={c.id}
+                    style={[styles.pill, catSeleccionada === c.id && styles.pillActive]}
+                    onPress={() => setCatSeleccionada(c.id)}
+                  >
+                    <Text style={[styles.pillText, catSeleccionada === c.id && styles.pillTextActive]}>
+                      {c.nombre}
+                    </Text>
                   </TouchableOpacity>
                 ))}
               </View>
-              <Controller control={control} name="monto"
+
+              <Controller
+                control={control} name="monto"
                 rules={{ required: 'El monto es obligatorio', pattern: { value: /^\d+(\.\d{1,2})?$/, message: 'Monto inválido' } }}
                 render={({ field: { onChange, value } }) => (
-                  <Input label="Monto (₡)" value={value} onChangeText={v => onChange(v.replace(/[^0-9.]/g, ''))}
-                    keyboardType="numeric" placeholder="45000" error={errors.monto?.message} />
-                )} />
-              <Controller control={control} name="notas"
+                  <Input label="Monto (₡)" value={value}
+                    onChangeText={v => onChange(v.replace(/[^0-9.]/g, ''))}
+                    keyboardType="numeric" placeholder="45 000" error={errors.monto?.message} />
+                )}
+              />
+
+              <Controller
+                control={control} name="notas"
                 render={({ field: { onChange, value } }) => (
                   <Input label="Notas (opcional)" value={value} onChangeText={onChange}
-                    placeholder="Ej: compré 10 pares a la proveedora" multiline numberOfLines={3} style={{ height: 80, textAlignVertical: 'top' }} />
-                )} />
+                    placeholder="Ej: compré 10 pares a la proveedora"
+                    multiline numberOfLines={3} style={{ height: 80, textAlignVertical: 'top' }} />
+                )}
+              />
+
               {gastoEditando && (
-                <TouchableOpacity style={styles.btnEliminarModal} onPress={() => { setModalAgregar(false); setGastoAEliminar(gastoEditando); setGastoEditando(null); }}>
-                  <Text style={styles.btnEliminarModalText}>🗑 Eliminar este gasto</Text>
+                <TouchableOpacity
+                  style={styles.btnEliminarModal}
+                  onPress={() => { setModalAgregar(false); setGastoAEliminar(gastoEditando); setGastoEditando(null); }}
+                >
+                  <Text style={styles.btnEliminarModalText}>Eliminar este gasto</Text>
                 </TouchableOpacity>
               )}
             </ScrollView>
@@ -191,12 +273,14 @@ export default function ExpensesScreen() {
         </View>
       </Modal>
 
-      {/* Modal confirmar eliminar */}
+      {/* ════ MODAL CONFIRMAR ELIMINAR ════ */}
       <Modal visible={!!gastoAEliminar} animationType="fade" transparent>
         <View style={styles.confirmOverlay}>
           <View style={styles.confirmBox}>
             <Text style={styles.confirmTitulo}>Eliminar gasto</Text>
-            <Text style={styles.confirmMensaje}>¿Eliminás este gasto de ₡{Number(gastoAEliminar?.monto || 0).toLocaleString('es-CR')}? Esta acción no se puede deshacer.</Text>
+            <Text style={styles.confirmMensaje}>
+              ¿Eliminás este gasto de ₡{Number(gastoAEliminar?.monto || 0).toLocaleString('es-CR')}? Esta acción no se puede deshacer.
+            </Text>
             <View style={styles.confirmBtns}>
               <TouchableOpacity style={styles.confirmCancelar} onPress={() => setGastoAEliminar(null)}>
                 <Text style={styles.confirmCancelarText}>Cancelar</Text>
@@ -213,65 +297,235 @@ export default function ExpensesScreen() {
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: COLORS.surface },
-  btnAgregar: { backgroundColor: COLORS.wine, borderRadius: 10, paddingVertical: 8, paddingHorizontal: 14, shadowColor: '#622632', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.3, shadowRadius: 8 },
-  btnAgregarText: { fontSize: 12, fontWeight: '600', color: COLORS.surface },
-  mesSelector: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#FFF8F5', paddingHorizontal: SIZES.lg, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: 'rgba(232,200,184,0.6)' },
-  mesBtn: { backgroundColor: 'white', borderRadius: 8, borderWidth: 1, borderColor: 'rgba(232,200,184,0.6)', paddingHorizontal: 12, paddingVertical: 4 },
-  mesBtnText: { fontSize: 18, color: COLORS.textPrimary },
-  mesNombre: { fontSize: 14, fontWeight: '600', color: COLORS.textPrimary, textTransform: 'capitalize' },
-  scroll: { flex: 1, backgroundColor: COLORS.background },
-  content: { padding: SIZES.lg },
-  totalCard: { backgroundColor: '#ECABA0', borderRadius: 16, padding: 18, borderWidth: 1, borderColor: '#E09080', marginBottom: 16, shadowColor: '#ECABA0', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.4, shadowRadius: 16 },
-  totalLabel: { fontSize: 9, color: '#7A3030', letterSpacing: 0.9, marginBottom: 4, fontWeight: '600' },
-  totalMonto: { fontSize: 30, fontWeight: '700', color: '#3D1010', marginBottom: 12, letterSpacing: -0.5 },
-  desglose: { gap: 6 },
-  desgloseItem: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  desgloseDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#622632' },
-  desgloseNombre: { flex: 1, fontSize: 12, color: '#7A3030' },
-  desgloseMonto: { fontSize: 12, fontWeight: '600', color: '#3D1010' },
-  sectionTitle: { fontSize: 10, fontWeight: '700', color: '#8F5C52', letterSpacing: 1, marginBottom: 10, textTransform: 'uppercase' },
-  gastoCard: { backgroundColor: 'white', borderRadius: 14, borderWidth: 1, borderColor: 'rgba(232,200,184,0.5)', marginBottom: 8, overflow: 'hidden', shadowColor: '#622632', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 8 },
-  gastoMain: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 12 },
-  gastoIcon: { width: 40, height: 40, borderRadius: 12, backgroundColor: '#ECABA0', alignItems: 'center', justifyContent: 'center' },
-  gastoInfo: { flex: 1 },
-  gastoCategoria: { fontSize: 13, fontWeight: '600', color: COLORS.textPrimary },
-  gastoNota: { fontSize: 11, color: COLORS.textMuted, marginTop: 2, fontStyle: 'italic' },
-  gastoFecha: { fontSize: 11, color: COLORS.textMuted, marginTop: 2 },
-  gastoMonto: { fontSize: 14, fontWeight: '700', color: COLORS.textPrimary },
-  gastoAcciones: { flexDirection: 'row', borderTopWidth: 1, borderTopColor: 'rgba(232,200,184,0.5)' },
-  btnEditar: { flex: 1, paddingVertical: 10, alignItems: 'center', borderRightWidth: 1, borderRightColor: 'rgba(232,200,184,0.5)' },
-  btnEditarText: { fontSize: 12, color: COLORS.wine, fontWeight: '500' },
-  btnEliminar: { flex: 1, paddingVertical: 10, alignItems: 'center' },
-  btnEliminarText: { fontSize: 12, color: COLORS.textMuted, fontWeight: '500' },
-  empty: { alignItems: 'center', paddingTop: 60, gap: 12 },
-  emptyIcon: { fontSize: 48 },
-  emptyText: { fontSize: 14, color: COLORS.textMuted, textTransform: 'capitalize' },
+ safe:   { flex: 1, backgroundColor: '#F0E8DF' },
+scroll: { flex: 1, backgroundColor: '#F0E8DF' },
+  content: { padding: 20, paddingBottom: 40 },
 
-  // Modal agregar/editar
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', alignItems: 'center', padding: 24 },
-  modalBox: { backgroundColor: COLORS.background, borderRadius: 20, width: '100%', maxWidth: 560, maxHeight: '85%', overflow: 'hidden' },
-  modalHeader: { backgroundColor: COLORS.surface, paddingHorizontal: SIZES.xl, paddingVertical: SIZES.lg, borderBottomWidth: 1, borderBottomColor: 'rgba(232,200,184,0.6)', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  modalCancelar: { fontSize: 14, color: COLORS.textMuted, fontWeight: '500' },
-  modalTitulo: { fontSize: 15, fontWeight: '600', color: COLORS.textPrimary },
-  modalGuardar: { fontSize: 14, color: COLORS.wine, fontWeight: '600' },
-  fieldLabel: { fontSize: SIZES.textXs, fontWeight: '600', color: COLORS.textMuted, letterSpacing: 0.7, marginBottom: 8 },
-  catGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 16 },
-  catChip: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, borderWidth: 1, borderColor: 'rgba(232,200,184,0.6)', backgroundColor: 'white' },
-  catChipActive: { backgroundColor: COLORS.wine, borderColor: COLORS.wine },
-  catChipText: { fontSize: 12, fontWeight: '500', color: COLORS.textPrimary },
-  catChipTextActive: { color: COLORS.surface },
-  btnEliminarModal: { marginTop: 24, padding: 14, borderRadius: 12, borderWidth: 1, borderColor: 'rgba(232,200,184,0.6)', alignItems: 'center' },
-  btnEliminarModalText: { fontSize: 13, color: COLORS.textMuted, fontWeight: '500' },
+  btnAdd: {
+    backgroundColor: colors.wine,
+    borderRadius: 11,
+    paddingVertical: 9,
+    paddingHorizontal: 18,
+  },
+  btnAddText: {
+    fontFamily: fonts.sansSemiBold,
+    fontSize: 13,
+    color: colors.paper,
+    letterSpacing: 0.2,
+  },
 
-  // Modal confirmar eliminar
-  confirmOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', alignItems: 'center', padding: 24 },
-  confirmBox: { backgroundColor: '#FFF1ED', borderRadius: 20, padding: 24, maxWidth: 480, width: '100%', alignSelf: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.15, shadowRadius: 24 },
-  confirmTitulo: { fontSize: 16, fontWeight: '700', color: COLORS.textPrimary, marginBottom: 8 },
-  confirmMensaje: { fontSize: 13, color: COLORS.textMuted, marginBottom: 24, lineHeight: 20 },
-  confirmBtns: { flexDirection: 'row', gap: 10 },
-  confirmCancelar: { flex: 1, padding: 12, borderRadius: 12, borderWidth: 1.5, borderColor: 'rgba(232,200,184,0.8)', alignItems: 'center' },
-  confirmCancelarText: { color: COLORS.textPrimary, fontWeight: '500', fontSize: 14 },
-  confirmEliminar: { flex: 1, padding: 12, borderRadius: 12, backgroundColor: COLORS.wine, alignItems: 'center', shadowColor: '#622632', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.3, shadowRadius: 8 },
-  confirmEliminarText: { color: COLORS.surface, fontWeight: '600', fontSize: 14 },
+  // ── Mes ───────────────────────────────────────────────────
+  monthNav: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: colors.cream,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.line,
+  },
+  monthArrow: {
+    width: 36, height: 36, borderRadius: 9,
+    borderWidth: 1, borderColor: colors.line,
+    backgroundColor: colors.paper,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  monthArrowText: { fontFamily: fonts.serifSemiBold, fontSize: 20, color: colors.wine, lineHeight: 24 },
+  monthLabel: { fontFamily: fonts.serifSemiBold, fontSize: 19, color: colors.ink, textTransform: 'capitalize' },
+
+  // ── Panel total ───────────────────────────────────────────
+  totalPanel: {
+    borderRadius: radius.hero,
+    padding: 28,
+    overflow: 'hidden',
+    marginBottom: 20,
+  },
+  totalFrame: {
+    position: 'absolute',
+    top: 12, left: 12, right: 12, bottom: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(226,196,154,0.28)',
+    borderRadius: 12,
+  },
+  totalEyebrow: {
+    fontFamily: fonts.sansBold,
+    fontSize: 10,
+    color: colors.goldSoft,
+    letterSpacing: 1.6,
+    marginBottom: 8,
+  },
+  totalMonto: {
+    fontFamily: fonts.serifSemiBold,
+    fontSize: 52,
+    color: '#FBEFE6',
+    lineHeight: 52,
+    letterSpacing: -0.5,
+    marginBottom: 16,
+  },
+  desglose:    { gap: 6 },
+  desgloseRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  desgloseDot: { width: 5, height: 5, borderRadius: 3, backgroundColor: colors.goldSoft },
+  desgloseNombre: {
+    flex: 1,
+    fontFamily: fonts.sansRegular,
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.72)',
+  },
+  desgloseMonto: {
+    fontFamily: fonts.serifSemiBold,
+    fontSize: 14,
+    color: colors.goldSoft,
+  },
+
+  // ── Lista ─────────────────────────────────────────────────
+  sectionTitle: {
+    fontFamily: fonts.sansBold,
+    fontSize: 10,
+    color: colors.wine,
+    letterSpacing: 1.2,
+    textTransform: 'uppercase',
+    marginBottom: 10,
+  },
+  listCard: {
+    backgroundColor: colors.cream,
+    borderWidth: 1,
+    borderColor: colors.line,
+    borderRadius: radius.card,
+    overflow: 'hidden',
+  },
+  gastoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    paddingVertical: 16,
+    paddingHorizontal: 18,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.line,
+  },
+  gastoIcon: {
+    width: 40, height: 40,
+    borderRadius: radius.avatar,
+    backgroundColor: colors.coralBg,
+    alignItems: 'center', justifyContent: 'center',
+    flexShrink: 0,
+  },
+  gastoIconText: { fontFamily: fonts.serifSemiBold, fontSize: 18, color: colors.wine },
+  gastoInfo: { flex: 1, minWidth: 0 },
+  gastoCategoria: { fontFamily: fonts.sansSemiBold, fontSize: 14, color: colors.ink },
+  gastoNota: {
+    fontFamily: fonts.serifItalic,
+    fontSize: 13,
+    color: colors.wine2,
+    marginTop: 2,
+  },
+  gastoFecha: { fontFamily: fonts.sansRegular, fontSize: 11, color: colors.muted, marginTop: 3 },
+  gastoRight: { alignItems: 'flex-end', gap: 8, flexShrink: 0 },
+  gastoMonto: { fontFamily: fonts.serifSemiBold, fontSize: 20, color: colors.ink, letterSpacing: -0.2 },
+  gastoActions: { flexDirection: 'row', gap: 7 },
+  iconBtn: {
+    width: 34, height: 34,
+    borderRadius: radius.iconBtn,
+    borderWidth: 1, borderColor: colors.line,
+    backgroundColor: colors.cream,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  iconBtnDanger: { borderColor: 'rgba(90,27,43,0.2)' },
+  iconBtnText: { fontSize: 15, color: colors.muted },
+
+  // ── Vacío ─────────────────────────────────────────────────
+  empty: { alignItems: 'center', paddingTop: 60 },
+  emptyText: {
+    fontFamily: fonts.sansMedium,
+    fontSize: 14,
+    color: colors.ink,
+    textTransform: 'capitalize',
+  },
+
+  // ── Modal ─────────────────────────────────────────────────
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(44,26,28,0.6)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  modalBox: {
+    backgroundColor: colors.sand,
+    borderRadius: 20,
+    width: '100%',
+    maxWidth: 560,
+    maxHeight: '85%',
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: colors.line,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.line,
+    backgroundColor: colors.paper,
+  },
+  modalCancelar: { fontFamily: fonts.sansSemiBold, fontSize: 15, color: colors.wine },
+  modalTitulo:   { fontFamily: fonts.serifSemiBold, fontSize: 22, color: colors.ink },
+  modalGuardar:  { fontFamily: fonts.sansSemiBold, fontSize: 15, color: colors.wine },
+  modalBody: { padding: 20, paddingBottom: 40 },
+
+  fieldLabel: {
+    fontFamily: fonts.sansBold,
+    fontSize: 10,
+    color: colors.muted,
+    letterSpacing: 1.2,
+    textTransform: 'uppercase',
+    marginBottom: 10,
+    marginTop: 6,
+  },
+  pillsWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 16 },
+  pill: {
+    paddingHorizontal: 16, paddingVertical: 9,
+    borderRadius: radius.pill,
+    borderWidth: 1, borderColor: colors.line,
+    backgroundColor: colors.paper,
+  },
+  pillActive:     { backgroundColor: colors.wine, borderColor: colors.wine },
+  pillText:       { fontFamily: fonts.sansSemiBold, fontSize: 13, color: colors.ink },
+  pillTextActive: { color: colors.paper },
+
+  btnEliminarModal: {
+    marginTop: 24,
+    padding: 16,
+    borderRadius: radius.card,
+    borderWidth: 1,
+    borderColor: 'rgba(90,27,43,0.2)',
+    alignItems: 'center',
+  },
+  btnEliminarModalText: { fontFamily: fonts.sansSemiBold, fontSize: 13, color: colors.wine },
+
+  // ── Confirm eliminar ──────────────────────────────────────
+  confirmOverlay: {
+    flex: 1, backgroundColor: 'rgba(26,10,10,0.5)',
+    justifyContent: 'center', alignItems: 'center', padding: 24,
+  },
+  confirmBox: {
+    backgroundColor: colors.cream, borderRadius: 20, padding: 24,
+    maxWidth: 480, width: '100%', alignSelf: 'center',
+    borderWidth: 1, borderColor: colors.line,
+  },
+  confirmTitulo:  { fontFamily: fonts.serifSemiBold, fontSize: 22, color: colors.ink, marginBottom: 8 },
+  confirmMensaje: { fontFamily: fonts.sansRegular, fontSize: 13, color: colors.muted, marginBottom: 24, lineHeight: 20 },
+  confirmBtns:    { flexDirection: 'row', gap: 10 },
+  confirmCancelar: {
+    flex: 1, padding: 14, borderRadius: radius.button,
+    borderWidth: 1, borderColor: colors.gold, alignItems: 'center',
+  },
+  confirmCancelarText: { fontFamily: fonts.sansSemiBold, color: colors.wine, fontSize: 14 },
+  confirmEliminar: {
+    flex: 1, padding: 14, borderRadius: radius.button,
+    backgroundColor: colors.wine, alignItems: 'center',
+  },
+  confirmEliminarText: { fontFamily: fonts.sansSemiBold, color: colors.paper, fontSize: 14 },
 });

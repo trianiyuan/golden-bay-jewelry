@@ -1,21 +1,21 @@
-// app/tabs/inventory.tsx
+// app/(tabs)/inventory.tsx — Boutique theme
 import React, { useState, useCallback } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity,
   TextInput, StyleSheet, SafeAreaView, useWindowDimensions, Alert,
 } from 'react-native';
 import { useRouter, useFocusEffect, useLocalSearchParams } from 'expo-router';
-import { COLORS, SIZES } from '../../constants/colors';
+import { colors, fonts, radius } from '../../constants/theme';
 import { PageHeader } from '../../components/ui/Header';
 import { ProductCard } from '../../components/inventory/ProductCard';
 import { getCategorias, getProductos, updateProducto } from '../../lib/queries/products';
 import { Producto, Categoria } from '../../types';
 
 const COLORES = [
-  { key: 'todos', label: 'All' },
-  { key: 'dorado', label: 'Gold', dot: '#D4AF37' },
-  { key: 'plateado', label: 'Silver', dot: '#C0C0C0' },
-  { key: 'rose_gold', label: 'Rose Gold', dot: '#ECABA0' },
+  { key: 'todos',    label: 'All',      dot: null },
+  { key: 'dorado',   label: 'Gold',     dot: '#C9A24A' },
+  { key: 'plateado', label: 'Silver',   dot: '#C4C4CA' },
+  { key: 'rose_gold',label: 'Rose Gold',dot: '#E0A091' },
 ];
 
 export default function InventoryScreen() {
@@ -34,7 +34,7 @@ export default function InventoryScreen() {
   const [loading, setLoading] = useState(true);
 
   const numColumns = width > 900 ? 4 : width > 600 ? 3 : 2;
-  const cardWidth = (width - SIZES.lg * 2 - 10 * (numColumns - 1)) / numColumns;
+  const cardWidth = (width - 40 - 12 * (numColumns - 1)) / numColumns;
   const finalCardWidth = Math.min(cardWidth, 280);
 
   const cargar = useCallback(async () => {
@@ -49,7 +49,7 @@ export default function InventoryScreen() {
   }, [mostrarArchivados]);
 
   useFocusEffect(useCallback(() => { cargar(); }, [cargar]));
-  
+
   React.useEffect(() => {
     if (filter === 'stock_bajo') setStockBajoFilter(true);
   }, [filter]);
@@ -80,86 +80,125 @@ export default function InventoryScreen() {
       <PageHeader
         title="Inventario"
         rightElement={
-          <TouchableOpacity style={styles.btnAgregar} onPress={() => router.push('/product/new')} activeOpacity={0.85}>
-            <Text style={styles.btnAgregarText}>+ Agregar</Text>
+          <TouchableOpacity style={styles.btnAdd} onPress={() => router.push('/product/new')} activeOpacity={0.85}>
+            <Text style={styles.btnAddText}>+ Agregar</Text>
           </TouchableOpacity>
         }
       />
+
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
 
+        {/* Banner stock bajo */}
         {stockBajoFilter && (
           <TouchableOpacity style={styles.alertBanner} onPress={() => setStockBajoFilter(false)}>
-            <Text style={styles.alertText}>⚠️ Mostrando productos con stock bajo — toca para limpiar</Text>
+            <Text style={styles.alertText}>Stock bajo — toca para limpiar filtro</Text>
           </TouchableOpacity>
         )}
 
+        {/* Toggle archivados */}
         <TouchableOpacity
-          style={[styles.archivadosToggle, mostrarArchivados && styles.archivadosToggleActive]}
+          style={[styles.archivadosBtn, mostrarArchivados && styles.archivadosBtnActive]}
           onPress={() => { setMostrarArchivados(prev => !prev); setStockBajoFilter(false); }}
         >
-          <Text style={[styles.archivadosToggleText, mostrarArchivados && styles.archivadosToggleTextActive]}>
-            {mostrarArchivados ? '← Volver al inventario activo' : '📦 Ver productos archivados'}
+          <Text style={[styles.archivadosBtnText, mostrarArchivados && styles.archivadosBtnTextActive]}>
+            {mostrarArchivados ? '← Volver al inventario activo' : 'Ver archivados'}
           </Text>
         </TouchableOpacity>
 
+        {/* Barra de búsqueda */}
         <View style={styles.searchBar}>
-          <Text style={styles.searchIcon}>🔍</Text>
+          <Text style={styles.searchIcon}>○</Text>
           <TextInput
             style={styles.searchInput}
-            placeholder={mostrarArchivados ? 'Buscar archivados...' : 'Buscar joyería...'}
-            placeholderTextColor={COLORS.textLight}
+            placeholder={mostrarArchivados ? 'Buscar archivados…' : 'Buscar joyería…'}
+            placeholderTextColor={colors.muted2}
             value={busqueda}
             onChangeText={setBusqueda}
           />
           {busqueda.length > 0 && (
             <TouchableOpacity onPress={() => setBusqueda('')}>
-              <Text style={{ color: COLORS.textMuted, fontSize: 16 }}>✕</Text>
+              <Text style={styles.searchClear}>✕</Text>
             </TouchableOpacity>
           )}
         </View>
 
+        {/* Filtros (solo inventario activo) */}
         {!mostrarArchivados && (
           <>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipsScroll} contentContainerStyle={styles.chipsContent}>
-              <TouchableOpacity style={[styles.chip, catActiva === 'todos' && styles.chipActive]} onPress={() => setCatActiva('todos')}>
-                <Text style={[styles.chipText, catActiva === 'todos' && styles.chipTextActive]}>Todos</Text>
+            {/* Categorías */}
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              style={styles.filtersScroll}
+              contentContainerStyle={styles.filtersContent}
+            >
+              <TouchableOpacity
+                style={[styles.filterPill, catActiva === 'todos' && styles.filterPillActive]}
+                onPress={() => setCatActiva('todos')}
+              >
+                <Text style={[styles.filterPillText, catActiva === 'todos' && styles.filterPillTextActive]}>
+                  Todos
+                </Text>
               </TouchableOpacity>
               {categorias.map(cat => (
-                <TouchableOpacity key={cat.id} style={[styles.chip, catActiva === cat.id && styles.chipActive]}
-                  onPress={() => { setCatActiva(cat.id); setTipoArete('todos'); }}>
-                  <Text style={[styles.chipText, catActiva === cat.id && styles.chipTextActive]}>{cat.nombre}</Text>
+                <TouchableOpacity
+                  key={cat.id}
+                  style={[styles.filterPill, catActiva === cat.id && styles.filterPillActive]}
+                  onPress={() => { setCatActiva(cat.id); setTipoArete('todos'); }}
+                >
+                  <Text style={[styles.filterPillText, catActiva === cat.id && styles.filterPillTextActive]}>
+                    {cat.nombre}
+                  </Text>
                 </TouchableOpacity>
               ))}
             </ScrollView>
 
+            {/* Subtipo aretes */}
             {esAretes && (
-              <View style={styles.subfilterRow}>
-                <Text style={styles.subfilterLabel}>TIPO:</Text>
+              <View style={styles.subRow}>
+                <Text style={styles.subLabel}>TIPO</Text>
                 {['todos', 'regular', 'ear_cuff'].map(tipo => (
-                  <TouchableOpacity key={tipo} style={[styles.subchip, tipoArete === tipo && styles.subchipActive]} onPress={() => setTipoArete(tipo)}>
-                    <Text style={styles.subchipText}>{tipo === 'todos' ? 'All' : tipo === 'regular' ? 'Regular' : 'Ear Cuff'}</Text>
+                  <TouchableOpacity
+                    key={tipo}
+                    style={[styles.subPill, tipoArete === tipo && styles.subPillActive]}
+                    onPress={() => setTipoArete(tipo)}
+                  >
+                    <Text style={[styles.subPillText, tipoArete === tipo && styles.subPillTextActive]}>
+                      {tipo === 'todos' ? 'All' : tipo === 'regular' ? 'Regular' : 'Ear Cuff'}
+                    </Text>
                   </TouchableOpacity>
                 ))}
               </View>
             )}
 
-            <View style={[styles.subfilterRow, { marginBottom: 14 }]}>
-              <Text style={styles.subfilterLabel}>COLOR:</Text>
+            {/* Color */}
+            <View style={[styles.subRow, { marginBottom: 14 }]}>
+              <Text style={styles.subLabel}>COLOR</Text>
               {COLORES.map(c => (
-                <TouchableOpacity key={c.key} style={[styles.subchip, colorActivo === c.key && styles.subchipActive]} onPress={() => setColorActivo(c.key)}>
-                  {c.dot && <View style={[styles.colorDot, { backgroundColor: c.dot }]} />}
-                  <Text style={styles.subchipText}>{c.label}</Text>
+                <TouchableOpacity
+                  key={c.key}
+                  style={[styles.subPill, colorActivo === c.key && styles.subPillActive]}
+                  onPress={() => setColorActivo(c.key)}
+                >
+                  {c.dot && (
+                    <View style={[styles.colorDot, { backgroundColor: c.dot }]} />
+                  )}
+                  <Text style={[styles.subPillText, colorActivo === c.key && styles.subPillTextActive]}>
+                    {c.label}
+                  </Text>
                 </TouchableOpacity>
               ))}
             </View>
           </>
         )}
 
-        <Text style={styles.resultsCount}>
+        {/* Contador */}
+        <Text style={styles.count}>
           {productosFiltrados.length} producto{productosFiltrados.length !== 1 ? 's' : ''}
           {mostrarArchivados ? ' archivados' : ''}
         </Text>
 
+        {/* Grid */}
         <View style={styles.grid}>
           {productosFiltrados.map(p => (
             <View key={p.id} style={{ width: finalCardWidth }}>
@@ -171,47 +210,208 @@ export default function InventoryScreen() {
           ))}
         </View>
 
+        {/* Estado vacío */}
         {productosFiltrados.length === 0 && !loading && (
           <View style={styles.empty}>
             <Text style={styles.emptyText}>
-              {mostrarArchivados ? '📦 Sin productos archivados' : stockBajoFilter ? '✓ Todo el stock en orden' : 'Sin productos con estos filtros'}
+              {mostrarArchivados
+                ? 'Sin productos archivados'
+                : stockBajoFilter
+                ? 'Todo el stock en orden'
+                : 'Sin productos con estos filtros'}
             </Text>
           </View>
         )}
+
       </ScrollView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: COLORS.surface },
-  btnAgregar: { backgroundColor: COLORS.wine, borderRadius: 10, paddingVertical: 8, paddingHorizontal: 14, shadowColor: '#622632', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.3, shadowRadius: 8 },
-  btnAgregarText: { fontSize: 12, fontWeight: '600', color: COLORS.surface },
-  scroll: { flex: 1, backgroundColor: COLORS.background },
-  content: { padding: SIZES.lg },
-  alertBanner: { backgroundColor: '#FFF0EE', borderRadius: 12, padding: 10, marginBottom: 12, borderWidth: 1, borderColor: '#E8A090' },
-  alertText: { fontSize: 12, color: COLORS.wine, fontWeight: '500', textAlign: 'center' },
-  archivadosToggle: { backgroundColor: 'white', borderRadius: 10, borderWidth: 1, borderColor: 'rgba(232,200,184,0.6)', padding: 10, marginBottom: 12, alignItems: 'center' },
-  archivadosToggleActive: { backgroundColor: '#FFF0EE', borderColor: COLORS.wine },
-  archivadosToggleText: { fontSize: 12, color: COLORS.textMuted, fontWeight: '500' },
-  archivadosToggleTextActive: { color: COLORS.wine },
-  searchBar: { backgroundColor: 'white', borderRadius: 12, borderWidth: 1, borderColor: 'rgba(232,200,184,0.6)', padding: 10, flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12, shadowColor: '#622632', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.04, shadowRadius: 8 },
-  searchIcon: { fontSize: 14 },
-  searchInput: { flex: 1, fontSize: 13, color: COLORS.textPrimary, padding: 0 },
-  chipsScroll: { marginBottom: 8 },
-  chipsContent: { gap: 8, paddingRight: 4 },
-  chip: { paddingHorizontal: 14, paddingVertical: 7, borderRadius: 20, borderWidth: 1, borderColor: 'rgba(232,200,184,0.6)', backgroundColor: 'white' },
-  chipActive: { backgroundColor: COLORS.wine, borderColor: COLORS.wine },
-  chipText: { fontSize: 12, fontWeight: '500', color: COLORS.textPrimary },
-  chipTextActive: { color: COLORS.surface },
-  subfilterRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8, flexWrap: 'wrap' },
-  subfilterLabel: { fontSize: 10, fontWeight: '600', color: COLORS.textMuted, letterSpacing: 0.5 },
-  subchip: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 11, paddingVertical: 5, borderRadius: 20, borderWidth: 1, borderColor: 'rgba(232,200,184,0.6)', backgroundColor: 'white' },
-  subchipActive: { backgroundColor: '#ECABA0', borderColor: '#E09080' },
-  subchipText: { fontSize: 11, fontWeight: '500', color: COLORS.textPrimary },
-  colorDot: { width: 9, height: 9, borderRadius: 999, borderWidth: 1, borderColor: 'rgba(0,0,0,0.1)' },
-  resultsCount: { fontSize: 11, color: COLORS.textMuted, marginBottom: 10 },
-  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-  empty: { padding: 24, alignItems: 'center' },
-  emptyText: { color: COLORS.textMuted, fontSize: 13 },
+  safe: { flex: 1, backgroundColor: '#F0E8DF' },
+scroll: { flex: 1, backgroundColor: '#F0E8DF' },
+  content: { padding: 20, paddingBottom: 40 },
+
+  // ── Botón agregar ─────────────────────────────────────────
+  btnAdd: {
+    backgroundColor: colors.wine,
+    borderRadius: 11,
+    paddingVertical: 9,
+    paddingHorizontal: 18,
+  },
+  btnAddText: {
+    fontFamily: fonts.sansSemiBold,
+    fontSize: 13,
+    color: colors.paper,
+    letterSpacing: 0.2,
+  },
+
+  // ── Banner stock bajo ─────────────────────────────────────
+  alertBanner: {
+    backgroundColor: colors.coralBg,
+    borderRadius: 12,
+    padding: 10,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: colors.coralSoft,
+    alignItems: 'center',
+  },
+  alertText: {
+    fontFamily: fonts.sansSemiBold,
+    fontSize: 12,
+    color: colors.wine,
+    textAlign: 'center',
+  },
+
+  // ── Toggle archivados ─────────────────────────────────────
+  archivadosBtn: {
+    backgroundColor: colors.paper,
+    borderRadius: 11,
+    borderWidth: 1,
+    borderColor: colors.lineStrong,
+    padding: 10,
+    marginBottom: 12,
+    alignItems: 'center',
+  },
+  archivadosBtnActive: {
+    backgroundColor: colors.coralBg,
+    borderColor: colors.wine,
+  },
+  archivadosBtnText: {
+    fontFamily: fonts.sansMedium,
+    fontSize: 12,
+    color: colors.muted,
+  },
+  archivadosBtnTextActive: {
+    fontFamily: fonts.sansSemiBold,
+    color: colors.wine,
+  },
+
+  // ── Búsqueda ──────────────────────────────────────────────
+  searchBar: {
+    backgroundColor: colors.paper,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.lineStrong,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 12,
+  },
+  searchIcon: {
+    fontSize: 14,
+    color: colors.muted2,
+  },
+  searchInput: {
+    flex: 1,
+    fontFamily: fonts.sansRegular,
+    fontSize: 14,
+    color: colors.ink,
+    padding: 0,
+  },
+  searchClear: {
+    fontSize: 14,
+    color: colors.muted,
+  },
+
+  // ── Pills de categoría ────────────────────────────────────
+  filtersScroll: { marginBottom: 10 },
+  filtersContent: { gap: 8, paddingRight: 4 },
+  filterPill: {
+  paddingHorizontal: 16,
+  paddingVertical: 8,
+  borderRadius: 100,       // ← pill completo
+  borderWidth: 1,
+  borderColor: colors.lineStrong,
+  backgroundColor: colors.paper,
+},
+filterPillActive: {
+  backgroundColor: colors.wine,
+  borderColor: colors.wine,
+},
+filterPillText: {
+  fontFamily: fonts.sansSemiBold,
+  fontSize: 13,
+  color: colors.muted,
+},
+filterPillTextActive: {
+  color: colors.paper,
+},
+
+  // ── Subpills (tipo / color) ───────────────────────────────
+  subRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 7,
+    marginBottom: 8,
+    flexWrap: 'wrap',
+  },
+  subLabel: {
+    fontFamily: fonts.sansBold,
+    fontSize: 10,
+    color: colors.muted,
+    letterSpacing: 1.2,
+    textTransform: 'uppercase',
+    marginRight: 2,
+  },
+  subPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: radius.pill,
+    borderWidth: 1,
+    borderColor: colors.line,
+    backgroundColor: colors.cream,
+  },
+  subPillActive: {
+    borderColor: colors.gold,
+    backgroundColor: colors.paper,
+  },
+  subPillText: {
+    fontFamily: fonts.sansMedium,
+    fontSize: 12,
+    color: colors.muted,
+  },
+  subPillTextActive: {
+    color: colors.wine,
+    fontFamily: fonts.sansSemiBold,
+  },
+  colorDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.08)',
+  },
+
+  // ── Contador y grid ───────────────────────────────────────
+  count: {
+    fontFamily: fonts.sansSemiBold,
+    fontSize: 12,
+    color: colors.muted,
+    marginBottom: 12,
+    letterSpacing: 0.3,
+  },
+  grid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+  },
+
+  // ── Estado vacío ──────────────────────────────────────────
+  empty: {
+    padding: 32,
+    alignItems: 'center',
+  },
+  emptyText: {
+    fontFamily: fonts.sansMedium,
+    fontSize: 13,
+    color: colors.muted,
+    textAlign: 'center',
+  },
 });

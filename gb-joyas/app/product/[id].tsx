@@ -1,4 +1,4 @@
-// app/product/[id].tsx
+// app/product/[id].tsx — Boutique theme
 import React, { useEffect, useState } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity, StyleSheet,
@@ -11,20 +11,20 @@ import {
   updateProducto, uploadImagenProducto, getCategorias, getTallasPorCategoria,
 } from '../../lib/queries/products';
 import { Producto, Categoria, TallaPorCategoria } from '../../types';
-import { COLORS, SIZES } from '../../constants/colors';
+import { colors, fonts, radius } from '../../constants/theme';
 import { Header } from '../../components/ui/Header';
 import { supabase } from '../../lib/supabase';
 import { Input } from '../../components/ui/Input';
 
 const COLOR_LABELS: Record<string, string> = { dorado: 'Oro', plateado: 'Plata', rose_gold: 'Oro Rosa' };
-const COLOR_DOTS: Record<string, string> = { dorado: '#D4AF37', plateado: '#C0C0C0', rose_gold: '#ECABA0' };
+const COLOR_DOTS:  Record<string, string> = { dorado: '#C9A24A', plateado: '#C4C4CA', rose_gold: '#E0A091' };
 const COLORES = [
-  { key: 'dorado', label: 'Oro', dot: '#D4AF37' },
-  { key: 'plateado', label: 'Plata', dot: '#C0C0C0' },
-  { key: 'rose_gold', label: 'Oro Rosa', dot: '#ECABA0' },
+  { key: 'dorado',    label: 'Oro',      dot: '#C9A24A' },
+  { key: 'plateado',  label: 'Plata',    dot: '#C4C4CA' },
+  { key: 'rose_gold', label: 'Oro Rosa', dot: '#E0A091' },
 ];
 const TIPOS_ARETE = [
-  { key: 'regular', label: 'Regular' },
+  { key: 'regular',  label: 'Regular'  },
   { key: 'ear_cuff', label: 'Ear Cuff' },
 ];
 
@@ -56,10 +56,7 @@ export default function ProductDetailScreen() {
   const [saving, setSaving] = useState(false);
 
   useEffect(() => { cargar(); getCategorias().then(setCategorias); }, [id]);
-
-  useEffect(() => {
-    if (editCat) getTallasPorCategoria(editCat).then(setTallas);
-  }, [editCat]);
+  useEffect(() => { if (editCat) getTallasPorCategoria(editCat).then(setTallas); }, [editCat]);
 
   const categoriaActiva = categorias.find(c => c.id === editCat);
   const esAretes = categoriaActiva?.nombre === 'Aretes';
@@ -83,9 +80,7 @@ export default function ProductDetailScreen() {
         .order('created_at', { ascending: false })
         .limit(5);
       setMovimientos(data || []);
-    } finally {
-      setLoading(false);
-    }
+    } finally { setLoading(false); }
   }
 
   async function cambiarStock(delta: number) {
@@ -101,9 +96,7 @@ export default function ProductDetailScreen() {
       await cargar();
     } catch (e: any) {
       Alert.alert('Aviso', e.message || 'Error al ajustar stock.');
-    } finally {
-      setAjustando(false);
-    }
+    } finally { setAjustando(false); }
   }
 
   async function cambiarImagen() {
@@ -117,7 +110,7 @@ export default function ProductDetailScreen() {
       const url = await uploadImagenProducto(producto.id, result.assets[0].uri);
       await updateProducto(producto.id, { imagen_url: url });
       setProducto(prev => prev ? { ...prev, imagen_url: url } : prev);
-    } catch (e: any) {
+    } catch {
       Alert.alert('Error', 'No se pudo actualizar la foto.');
     }
   }
@@ -147,22 +140,15 @@ export default function ProductDetailScreen() {
       setEditMode(false);
     } catch (e: any) {
       Alert.alert('Error', e.message);
-    } finally {
-      setSaving(false);
-    }
+    } finally { setSaving(false); }
   }
 
   async function ejecutarEliminar() {
     try {
       const { data: ventasAsociadas } = await supabase
-        .from('ventas_productos')
-        .select('id')
-        .eq('producto_id', producto!.id)
-        .limit(1);
-
+        .from('ventas_productos').select('id').eq('producto_id', producto!.id).limit(1);
       if (ventasAsociadas && ventasAsociadas.length > 0) {
-        setModalEliminar(false);
-        setModalEliminarConVentas(true);
+        setModalEliminar(false); setModalEliminarConVentas(true);
       } else {
         await supabase.from('movimientos_inventario').delete().eq('producto_id', producto!.id);
         const { error } = await supabase.from('productos').delete().eq('id', producto!.id);
@@ -201,10 +187,44 @@ export default function ProductDetailScreen() {
     }
   }
 
+  // ── Modales compartidos ───────────────────────────────────
+  const Modales = () => (
+    <>
+      {[
+        { visible: modalArchivar, setVisible: setModalArchivar, titulo: 'Archivar producto',
+          mensaje: `"${producto?.nombre}" se ocultará del inventario pero sus ventas se mantendrán en los reportes.`,
+          accion: ejecutarArchivar, label: 'Archivar' },
+        { visible: modalEliminar, setVisible: setModalEliminar, titulo: 'Eliminar producto',
+          mensaje: `¿Eliminás "${producto?.nombre}"? Esta acción no se puede deshacer.`,
+          accion: ejecutarEliminar, label: 'Eliminar' },
+        { visible: modalEliminarConVentas, setVisible: setModalEliminarConVentas, titulo: 'Este producto tiene ventas',
+          mensaje: `"${producto?.nombre}" tiene ventas registradas. Si lo eliminás, el detalle de esas ventas perderá la referencia al producto.`,
+          accion: ejecutarEliminarConVentas, label: 'Eliminar igual' },
+      ].map(({ visible, setVisible, titulo, mensaje, accion, label }) => (
+        <Modal key={titulo} visible={visible} animationType="fade" transparent>
+          <View style={styles.confirmOverlay}>
+            <View style={styles.confirmBox}>
+              <Text style={styles.confirmTitulo}>{titulo}</Text>
+              <Text style={styles.confirmMensaje}>{mensaje}</Text>
+              <View style={styles.confirmBtns}>
+                <TouchableOpacity style={styles.confirmCancelar} onPress={() => setVisible(false)}>
+                  <Text style={styles.confirmCancelarText}>Cancelar</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.confirmEliminar} onPress={accion}>
+                  <Text style={styles.confirmEliminarText}>{label}</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </Modal>
+      ))}
+    </>
+  );
+
   if (loading) {
     return (
       <SafeAreaView style={[styles.safe, { justifyContent: 'center', alignItems: 'center' }]}>
-        <ActivityIndicator color={COLORS.wine} />
+        <ActivityIndicator color={colors.wine} />
       </SafeAreaView>
     );
   }
@@ -212,96 +232,43 @@ export default function ProductDetailScreen() {
   if (!producto) return null;
   const stockBajo = producto.cantidad < 3;
 
-  // Componente reutilizable de modales
-  const Modales = () => (
-    <>
-      <Modal visible={modalArchivar} animationType="fade" transparent>
-        <View style={styles.confirmOverlay}>
-          <View style={styles.confirmBox}>
-            <Text style={styles.confirmTitulo}>Archivar producto</Text>
-            <Text style={styles.confirmMensaje}>"{producto?.nombre}" se ocultará del inventario pero sus ventas se mantendrán en los reportes.</Text>
-            <View style={styles.confirmBtns}>
-              <TouchableOpacity style={styles.confirmCancelar} onPress={() => setModalArchivar(false)}>
-                <Text style={styles.confirmCancelarText}>Cancelar</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.confirmEliminar} onPress={ejecutarArchivar}>
-                <Text style={styles.confirmEliminarText}>Archivar</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
-
-      <Modal visible={modalEliminar} animationType="fade" transparent>
-        <View style={styles.confirmOverlay}>
-          <View style={styles.confirmBox}>
-            <Text style={styles.confirmTitulo}>Eliminar producto</Text>
-            <Text style={styles.confirmMensaje}>¿Eliminás "{producto?.nombre}"? Esta acción no se puede deshacer.</Text>
-            <View style={styles.confirmBtns}>
-              <TouchableOpacity style={styles.confirmCancelar} onPress={() => setModalEliminar(false)}>
-                <Text style={styles.confirmCancelarText}>Cancelar</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.confirmEliminar} onPress={ejecutarEliminar}>
-                <Text style={styles.confirmEliminarText}>Eliminar</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
-
-      <Modal visible={modalEliminarConVentas} animationType="fade" transparent>
-        <View style={styles.confirmOverlay}>
-          <View style={styles.confirmBox}>
-            <Text style={styles.confirmTitulo}>Este producto tiene ventas</Text>
-            <Text style={styles.confirmMensaje}>"{producto?.nombre}" tiene ventas registradas. Si lo eliminás, los totales de tus reportes no se verán afectados, pero el detalle de esas ventas perderá la referencia al producto.</Text>
-            <View style={styles.confirmBtns}>
-              <TouchableOpacity style={styles.confirmCancelar} onPress={() => setModalEliminarConVentas(false)}>
-                <Text style={styles.confirmCancelarText}>Cancelar</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.confirmEliminar} onPress={ejecutarEliminarConVentas}>
-                <Text style={styles.confirmEliminarText}>Eliminar igual</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
-    </>
-  );
-
+  // ── Modo edición ──────────────────────────────────────────
   if (editMode) {
     return (
       <SafeAreaView style={styles.safe}>
-        <Header showBack backLabel="‹ Cancelar" title="Editar Producto"
+        <Header
+          showBack backLabel="‹ Cancelar" title="Editar producto"
           rightElement={
             <TouchableOpacity onPress={guardarEdicion} disabled={saving}>
               {saving
-                ? <ActivityIndicator color={COLORS.wine} size="small" />
-                : <Text style={{ color: COLORS.wine, fontWeight: '600', fontSize: 14 }}>Guardar</Text>
+                ? <ActivityIndicator color={colors.wine} size="small" />
+                : <Text style={styles.saveLink}>Guardar</Text>
               }
             </TouchableOpacity>
           }
         />
         <ScrollView contentContainerStyle={styles.content}>
-          <TouchableOpacity style={styles.imageContainer} onPress={cambiarImagen} activeOpacity={0.9}>
+          <TouchableOpacity style={styles.imgContainer} onPress={cambiarImagen} activeOpacity={0.9}>
             {producto.imagen_url
-              ? <Image source={{ uri: producto.imagen_url }} style={styles.image} resizeMode="cover" />
-              : <View style={styles.imagePlaceholder}><Text style={{ fontSize: 40 }}>💍</Text></View>
+              ? <Image source={{ uri: producto.imagen_url }} style={StyleSheet.absoluteFillObject} resizeMode="cover" />
+              : <View style={styles.imgPlaceholder}><Text style={styles.imgPlaceholderGlyph}>◇</Text></View>
             }
-            <View style={styles.imageOverlay}><Text style={styles.imageOverlayText}>📷 Cambiar foto</Text></View>
+            <View style={styles.imgOverlay}><Text style={styles.imgOverlayText}>Cambiar foto</Text></View>
           </TouchableOpacity>
 
           <Input label="Nombre del producto *" value={editNombre} onChangeText={setEditNombre} placeholder="Nombre" />
-          <Input label="Precio de venta (₡) *" value={editPrecioVenta} onChangeText={setEditPrecioVenta} keyboardType="numeric" placeholder="18000" />
-          <Input label="Precio de costo (₡) *" value={editPrecioCosto} onChangeText={setEditPrecioCosto} keyboardType="numeric" placeholder="5000" />
-          <Input label="Descripción (opcional)" value={editDescripcion} onChangeText={setEditDescripcion} placeholder="Detalles..." multiline style={{ height: 70, textAlignVertical: 'top' }} />
+          <Input label="Precio de venta (₡) *" value={editPrecioVenta} onChangeText={setEditPrecioVenta} keyboardType="numeric" placeholder="18 000" />
+          <Input label="Precio de costo (₡) *" value={editPrecioCosto} onChangeText={setEditPrecioCosto} keyboardType="numeric" placeholder="5 000" />
+          <Input label="Descripción (opcional)" value={editDescripcion} onChangeText={setEditDescripcion}
+            placeholder="Detalles..." multiline style={{ height: 70, textAlignVertical: 'top' }} />
 
           <Text style={styles.fieldLabel}>CATEGORÍA *</Text>
-          <View style={styles.chipsRow}>
+          <View style={styles.pillsRow}>
             {categorias.map(cat => (
               <TouchableOpacity key={cat.id}
-                style={[styles.chip, editCat === cat.id && styles.chipActive]}
+                style={[styles.pill, editCat === cat.id && styles.pillActive]}
                 onPress={() => { setEditCat(cat.id); setEditTipoArete(null); }}>
-                <Text style={[styles.chipText, editCat === cat.id && styles.chipTextActive]}>{cat.nombre}</Text>
+                <Text style={[styles.pillText, editCat === cat.id && styles.pillTextActive]}>{cat.nombre}</Text>
               </TouchableOpacity>
             ))}
           </View>
@@ -324,12 +291,12 @@ export default function ProductDetailScreen() {
           {esAretes && (
             <>
               <Text style={styles.fieldLabel}>TIPO DE ARETE *</Text>
-              <View style={styles.chipsRow}>
+              <View style={styles.pillsRow}>
                 {TIPOS_ARETE.map(t => (
                   <TouchableOpacity key={t.key}
-                    style={[styles.chip, editTipoArete === t.key && styles.chipActive]}
+                    style={[styles.pill, editTipoArete === t.key && styles.pillActive]}
                     onPress={() => setEditTipoArete(t.key as 'regular' | 'ear_cuff')}>
-                    <Text style={[styles.chipText, editTipoArete === t.key && styles.chipTextActive]}>{t.label}</Text>
+                    <Text style={[styles.pillText, editTipoArete === t.key && styles.pillTextActive]}>{t.label}</Text>
                   </TouchableOpacity>
                 ))}
               </View>
@@ -337,22 +304,22 @@ export default function ProductDetailScreen() {
           )}
 
           <Text style={styles.fieldLabel}>COLOR *</Text>
-          <View style={styles.chipsRow}>
+          <View style={styles.pillsRow}>
             {COLORES.map(c => (
               <TouchableOpacity key={c.key}
-                style={[styles.chip, editColor === c.key && styles.chipActive]}
+                style={[styles.pill, editColor === c.key && styles.pillActive]}
                 onPress={() => setEditColor(c.key)}>
                 <View style={[styles.colorDot, { backgroundColor: c.dot }]} />
-                <Text style={[styles.chipText, editColor === c.key && styles.chipTextActive]}>{c.label}</Text>
+                <Text style={[styles.pillText, editColor === c.key && styles.pillTextActive]}>{c.label}</Text>
               </TouchableOpacity>
             ))}
           </View>
 
-          <TouchableOpacity style={styles.archiveBtn} onPress={() => setModalArchivar(true)}>
-            <Text style={styles.archiveBtnText}>📦 Archivar producto</Text>
+          <TouchableOpacity style={styles.dangerBtn} onPress={() => setModalArchivar(true)}>
+            <Text style={styles.dangerBtnText}>Archivar producto</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={[styles.archiveBtn, { marginTop: 8, borderColor: 'rgba(192,57,43,0.3)' }]} onPress={() => setModalEliminar(true)}>
-            <Text style={[styles.archiveBtnText, { color: COLORS.error }]}>🗑 Eliminar producto</Text>
+          <TouchableOpacity style={[styles.dangerBtn, { marginTop: 8, borderColor: colors.goldLine }]} onPress={() => setModalEliminar(true)}>
+            <Text style={[styles.dangerBtnText, { color: colors.coral }]}>Eliminar producto</Text>
           </TouchableOpacity>
           <View style={{ height: 20 }} />
         </ScrollView>
@@ -361,9 +328,11 @@ export default function ProductDetailScreen() {
     );
   }
 
+  // ── Vista de detalle ──────────────────────────────────────
   return (
     <SafeAreaView style={styles.safe}>
-      <Header showBack backLabel="‹ Volver" title={producto.nombre}
+      <Header
+        showBack backLabel="‹ Volver" title={producto.nombre}
         rightElement={
           <TouchableOpacity style={styles.editBtn} onPress={() => setEditMode(true)}>
             <Text style={styles.editBtnText}>Editar</Text>
@@ -373,103 +342,36 @@ export default function ProductDetailScreen() {
 
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
 
-        {/* LAYOUT DESKTOP: imagen izquierda + info derecha */}
         {isDesktop ? (
           <View style={styles.desktopRow}>
-            <TouchableOpacity style={styles.desktopImage} onPress={cambiarImagen} activeOpacity={0.9}>
+            <TouchableOpacity style={styles.desktopImg} onPress={cambiarImagen} activeOpacity={0.9}>
               {producto.imagen_url
-                ? <Image source={{ uri: producto.imagen_url }} style={styles.image} resizeMode="cover" />
-                : <View style={styles.imagePlaceholder}>
-                    <Text style={{ fontSize: 52 }}>💍</Text>
-                    <Text style={styles.imagePlaceholderText}>Tocá para agregar foto</Text>
-                  </View>
+                ? <Image source={{ uri: producto.imagen_url }} style={StyleSheet.absoluteFillObject} resizeMode="cover" />
+                : <View style={styles.imgPlaceholder}><Text style={styles.imgPlaceholderGlyph}>◇</Text></View>
               }
-              <View style={styles.imageOverlay}><Text style={styles.imageOverlayText}>📷 Cambiar foto</Text></View>
+              <View style={styles.imgOverlay}><Text style={styles.imgOverlayText}>Cambiar foto</Text></View>
             </TouchableOpacity>
-            <View style={styles.desktopInfo}>
-              <View style={styles.infoCard}>
-                <Text style={styles.productoNombre}>{producto.nombre}</Text>
-                <View style={styles.metaRow}>
-                  <View style={[styles.colorDotLg, { backgroundColor: COLOR_DOTS[producto.color] }]} />
-                  <Text style={styles.metaText}>{COLOR_LABELS[producto.color]} · Talla {producto.talla?.valor}</Text>
-                  <View style={styles.categoriaBadge}>
-                    <Text style={styles.categoriaText}>{producto.categoria?.nombre}</Text>
-                  </View>
-                  {producto.tipo_arete && (
-                    <View style={[styles.categoriaBadge, { marginLeft: 4 }]}>
-                      <Text style={styles.categoriaText}>{producto.tipo_arete === 'regular' ? 'Regular' : 'Ear Cuff'}</Text>
-                    </View>
-                  )}
-                </View>
-                {producto.descripcion ? <Text style={styles.descripcion}>{producto.descripcion}</Text> : null}
-                <View style={styles.pricesRow}>
-                  <View style={styles.priceItem}>
-                    <Text style={styles.priceLabel}>PRECIO VENTA</Text>
-                    <Text style={styles.priceValue}>₡{(producto.precio_venta || (producto as any).precio || 0).toLocaleString('es-CR')}</Text>
-                  </View>
-                  <View style={styles.priceItem}>
-                    <Text style={styles.priceLabel}>PRECIO COSTO</Text>
-                    <Text style={styles.priceValue}>₡{(producto.precio_costo || 0).toLocaleString('es-CR')}</Text>
-                  </View>
-                  <View style={styles.priceItem}>
-                    <Text style={styles.priceLabel}>MARGEN</Text>
-                    <Text style={[styles.priceValue, { color: COLORS.wine }]}>
-                      ₡{((producto.precio_venta || (producto as any).precio || 0) - (producto.precio_costo || 0)).toLocaleString('es-CR')}
-                    </Text>
-                  </View>
-                </View>
-              </View>
+            <View style={{ flex: 1 }}>
+              <InfoCard producto={producto} />
             </View>
           </View>
         ) : (
           <>
-            {/* LAYOUT MOBILE: imagen arriba */}
-            <TouchableOpacity style={styles.imageContainer} onPress={cambiarImagen} activeOpacity={0.9}>
+            <TouchableOpacity style={styles.imgContainer} onPress={cambiarImagen} activeOpacity={0.9}>
               {producto.imagen_url
-                ? <Image source={{ uri: producto.imagen_url }} style={styles.image} resizeMode="cover" />
-                : <View style={styles.imagePlaceholder}>
-                    <Text style={{ fontSize: 52 }}>💍</Text>
-                    <Text style={styles.imagePlaceholderText}>Tocá para agregar foto</Text>
+                ? <Image source={{ uri: producto.imagen_url }} style={StyleSheet.absoluteFillObject} resizeMode="cover" />
+                : <View style={styles.imgPlaceholder}>
+                    <Text style={styles.imgPlaceholderGlyph}>◇</Text>
+                    <Text style={styles.imgPlaceholderHint}>Tocá para agregar foto</Text>
                   </View>
               }
-              <View style={styles.imageOverlay}><Text style={styles.imageOverlayText}>📷 Cambiar foto</Text></View>
+              <View style={styles.imgOverlay}><Text style={styles.imgOverlayText}>Cambiar foto</Text></View>
             </TouchableOpacity>
-
-            <View style={styles.infoCard}>
-              <Text style={styles.productoNombre}>{producto.nombre}</Text>
-              <View style={styles.metaRow}>
-                <View style={[styles.colorDotLg, { backgroundColor: COLOR_DOTS[producto.color] }]} />
-                <Text style={styles.metaText}>{COLOR_LABELS[producto.color]} · Talla {producto.talla?.valor}</Text>
-                <View style={styles.categoriaBadge}>
-                  <Text style={styles.categoriaText}>{producto.categoria?.nombre}</Text>
-                </View>
-                {producto.tipo_arete && (
-                  <View style={[styles.categoriaBadge, { marginLeft: 4 }]}>
-                    <Text style={styles.categoriaText}>{producto.tipo_arete === 'regular' ? 'Regular' : 'Ear Cuff'}</Text>
-                  </View>
-                )}
-              </View>
-              {producto.descripcion ? <Text style={styles.descripcion}>{producto.descripcion}</Text> : null}
-              <View style={styles.pricesRow}>
-                <View style={styles.priceItem}>
-                  <Text style={styles.priceLabel}>PRECIO VENTA</Text>
-                  <Text style={styles.priceValue}>₡{(producto.precio_venta || (producto as any).precio || 0).toLocaleString('es-CR')}</Text>
-                </View>
-                <View style={styles.priceItem}>
-                  <Text style={styles.priceLabel}>PRECIO COSTO</Text>
-                  <Text style={styles.priceValue}>₡{(producto.precio_costo || 0).toLocaleString('es-CR')}</Text>
-                </View>
-                <View style={styles.priceItem}>
-                  <Text style={styles.priceLabel}>MARGEN</Text>
-                  <Text style={[styles.priceValue, { color: COLORS.wine }]}>
-                    ₡{((producto.precio_venta || (producto as any).precio || 0) - (producto.precio_costo || 0)).toLocaleString('es-CR')}
-                  </Text>
-                </View>
-              </View>
-            </View>
+            <InfoCard producto={producto} />
           </>
         )}
 
+        {/* Stock */}
         <View style={styles.stockCard}>
           <Text style={styles.stockTitle}>STOCK ACTUAL</Text>
           <View style={styles.stockControls}>
@@ -482,9 +384,9 @@ export default function ProductDetailScreen() {
             </TouchableOpacity>
             <View style={styles.stockDisplay}>
               {ajustando
-                ? <ActivityIndicator color={COLORS.wine} />
+                ? <ActivityIndicator color={colors.wine} />
                 : <>
-                    <Text style={[styles.stockNumber, stockBajo && { color: COLORS.wine }]}>
+                    <Text style={[styles.stockNumber, stockBajo && { color: colors.wine }]}>
                       {producto.cantidad}
                     </Text>
                     <Text style={styles.stockUnidad}>
@@ -499,40 +401,40 @@ export default function ProductDetailScreen() {
           </View>
           {stockBajo && (
             <View style={styles.stockAlerta}>
-              <Text style={styles.stockAlertaText}>⚠️ Stock bajo — menos de 3 unidades</Text>
+              <Text style={styles.stockAlertaText}>Stock bajo — menos de 3 unidades</Text>
             </View>
           )}
         </View>
 
+        {/* Movimientos */}
         {movimientos.length > 0 && (
           <>
             <Text style={styles.sectionTitle}>MOVIMIENTOS RECIENTES</Text>
             {movimientos.map(m => (
-              <View key={m.id} style={styles.movimientoItem}>
-                <View style={[styles.movimientoIcon,
-                  { backgroundColor: m.tipo === 'entrada' ? '#EAF3DE' : m.tipo === 'salida' ? COLORS.rose : COLORS.surfaceAlt }]}>
-                  <Text style={{ fontSize: 14 }}>
+              <View key={m.id} style={styles.movRow}>
+                <View style={[styles.movIcon,
+                  { backgroundColor: m.tipo === 'entrada' ? '#EAF3DE' : m.tipo === 'salida' ? colors.coralBg : colors.cream }]}>
+                  <Text style={{ fontSize: 14, color: m.tipo === 'entrada' ? '#3B6D11' : colors.wine }}>
                     {m.tipo === 'entrada' ? '↑' : m.tipo === 'salida' ? '↓' : '↔'}
                   </Text>
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.movimientoMotivo}>{m.motivo}</Text>
-                  <Text style={styles.movimientoFecha}>
-                    {new Date(m.created_at).toLocaleDateString('es-CR')}
-                  </Text>
+                  <Text style={styles.movMotivo}>{m.motivo}</Text>
+                  <Text style={styles.movFecha}>{new Date(m.created_at).toLocaleDateString('es-CR')}</Text>
                 </View>
-                <Text style={[styles.movimientoCantidad, { color: m.cantidad > 0 ? '#3B6D11' : COLORS.wine }]}>
+                <Text style={[styles.movCantidad, { color: m.cantidad > 0 ? '#3B6D11' : colors.wine }]}>
                   {m.cantidad > 0 ? '+' : ''}{m.cantidad}
                 </Text>
               </View>
             ))}
           </>
         )}
-        <TouchableOpacity style={styles.archiveBtn} onPress={() => setModalArchivar(true)}>
-          <Text style={styles.archiveBtnText}>📦 Archivar producto</Text>
+
+        <TouchableOpacity style={styles.dangerBtn} onPress={() => setModalArchivar(true)}>
+          <Text style={styles.dangerBtnText}>Archivar producto</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={[styles.archiveBtn, { marginTop: 8, borderColor: 'rgba(192,57,43,0.3)' }]} onPress={() => setModalEliminar(true)}>
-          <Text style={[styles.archiveBtnText, { color: COLORS.error }]}>🗑 Eliminar producto</Text>
+        <TouchableOpacity style={[styles.dangerBtn, { marginTop: 8, borderColor: 'rgba(192,57,43,0.3)' }]} onPress={() => setModalEliminar(true)}>
+          <Text style={[styles.dangerBtnText, { color: colors.coral }]}>Eliminar producto</Text>
         </TouchableOpacity>
         <View style={{ height: 20 }} />
       </ScrollView>
@@ -541,72 +443,268 @@ export default function ProductDetailScreen() {
   );
 }
 
+// ── InfoCard (info básica del producto) ───────────────────────
+function InfoCard({ producto }: { producto: Producto }) {
+  return (
+    <View style={styles.infoCard}>
+      <Text style={styles.productoNombre}>{producto.nombre}</Text>
+      <View style={styles.metaRow}>
+        <View style={[styles.colorDotLg, { backgroundColor: COLOR_DOTS[producto.color] || colors.muted2 }]} />
+        <Text style={styles.metaText}>{COLOR_LABELS[producto.color]} · Talla {producto.talla?.valor}</Text>
+        <View style={styles.categoriaBadge}>
+          <Text style={styles.categoriaText}>{producto.categoria?.nombre}</Text>
+        </View>
+        {producto.tipo_arete && (
+          <View style={[styles.categoriaBadge, { marginLeft: 4 }]}>
+            <Text style={styles.categoriaText}>
+              {producto.tipo_arete === 'regular' ? 'Regular' : 'Ear Cuff'}
+            </Text>
+          </View>
+        )}
+      </View>
+      {producto.descripcion ? <Text style={styles.descripcion}>{producto.descripcion}</Text> : null}
+      <View style={styles.pricesRow}>
+        {[
+          { label: 'PRECIO VENTA', value: producto.precio_venta || (producto as any).precio || 0, wine: false },
+          { label: 'PRECIO COSTO', value: producto.precio_costo || 0, wine: false },
+          { label: 'MARGEN', value: (producto.precio_venta || (producto as any).precio || 0) - (producto.precio_costo || 0), wine: true },
+        ].map(({ label, value, wine }) => (
+          <View key={label} style={styles.priceItem}>
+            <Text style={styles.priceLabel}>{label}</Text>
+            <Text style={[styles.priceValue, wine && { color: colors.wine }]}>
+              ₡{value.toLocaleString('es-CR')}
+            </Text>
+          </View>
+        ))}
+      </View>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: COLORS.background },
-  scroll: { flex: 1 },
-  content: { padding: SIZES.lg },
-  editBtn: { backgroundColor: COLORS.surfaceAlt, borderRadius: SIZES.radiusSm, paddingVertical: 6, paddingHorizontal: 12, borderWidth: 1, borderColor: COLORS.border },
-  editBtnText: { fontSize: 13, fontWeight: '600', color: COLORS.wine },
-  // Desktop layout
+  safe:    { flex: 1, backgroundColor: colors.sand },
+  scroll:  { flex: 1 },
+  content: { padding: 20 },
+
+  // ── Links header ──────────────────────────────────────────
+  saveLink: {
+    fontFamily: fonts.sansSemiBold,
+    fontSize: 15,
+    color: colors.wine,
+  },
+  editBtn: {
+    backgroundColor: colors.paper,
+    borderRadius: 8,
+    paddingVertical: 6,
+    paddingHorizontal: 14,
+    borderWidth: 1,
+    borderColor: colors.lineStrong,
+  },
+  editBtnText: {
+    fontFamily: fonts.sansSemiBold,
+    fontSize: 13,
+    color: colors.wine,
+  },
+
+  // Desktop
   desktopRow: { flexDirection: 'row', gap: 24, marginBottom: 16, alignItems: 'flex-start' },
-  desktopImage: { width: '35%', aspectRatio: 1, borderRadius: SIZES.radiusLg, overflow: 'hidden', borderWidth: 1, borderColor: COLORS.border },
-  desktopInfo: { flex: 1 },
-  // Mobile layout
-  imageContainer: { width: '100%', aspectRatio: 1.5, borderRadius: SIZES.radiusLg, overflow: 'hidden', marginBottom: 16, borderWidth: 1, borderColor: COLORS.border },
-  image: { width: '100%', height: '100%' },
-  imagePlaceholder: { flex: 1, backgroundColor: COLORS.blush, alignItems: 'center', justifyContent: 'center', gap: 8 },
-  imagePlaceholderText: { fontSize: 13, color: COLORS.textMuted },
-  imageOverlay: { position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: 'rgba(0,0,0,0.25)', padding: 8, alignItems: 'center' },
-  imageOverlayText: { fontSize: 12, color: 'white', fontWeight: '500' },
-  infoCard: { backgroundColor: COLORS.surface, borderRadius: SIZES.radiusLg, padding: 16, borderWidth: 1, borderColor: COLORS.border, marginBottom: 12 },
-  productoNombre: { fontSize: 20, fontWeight: '600', color: COLORS.textPrimary, marginBottom: 8 },
-  metaRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8, flexWrap: 'wrap' },
+  desktopImg: { width: '35%', aspectRatio: 1, borderRadius: radius.card, overflow: 'hidden', borderWidth: 1, borderColor: colors.line },
+
+  // ── Imagen ────────────────────────────────────────────────
+  imgContainer: {
+    width: '100%',
+    aspectRatio: 1.5,
+    borderRadius: radius.card,
+    overflow: 'hidden',
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: colors.line,
+  },
+  imgPlaceholder: {
+    flex: 1,
+    backgroundColor: '#F7E6E0',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  imgPlaceholderGlyph: { fontSize: 32, color: colors.muted, opacity: 0.4 },
+  imgPlaceholderHint: { fontFamily: fonts.sansMedium, fontSize: 12, color: colors.muted },
+  imgOverlay: {
+    position: 'absolute',
+    bottom: 0, left: 0, right: 0,
+    backgroundColor: 'rgba(90,27,43,0.45)',
+    padding: 8,
+    alignItems: 'center',
+  },
+  imgOverlayText: { fontFamily: fonts.sansSemiBold, fontSize: 12, color: colors.paper },
+
+  // ── Info card ─────────────────────────────────────────────
+  infoCard: {
+    backgroundColor: colors.cream,
+    borderRadius: radius.card,
+    padding: 18,
+    borderWidth: 1,
+    borderColor: colors.line,
+    marginBottom: 12,
+  },
+  productoNombre: {
+    fontFamily: fonts.serifSemiBold,
+    fontSize: 24,
+    color: colors.ink,
+    marginBottom: 10,
+  },
+  metaRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 10, flexWrap: 'wrap' },
   colorDotLg: { width: 10, height: 10, borderRadius: 5, borderWidth: 1, borderColor: 'rgba(0,0,0,0.1)' },
-  metaText: { fontSize: 13, color: COLORS.textMuted, flex: 1 },
-  categoriaBadge: { backgroundColor: COLORS.surfaceAlt, borderRadius: SIZES.radiusFull, paddingHorizontal: 10, paddingVertical: 3, borderWidth: 1, borderColor: COLORS.border },
-  categoriaText: { fontSize: 11, color: COLORS.textPrimary, fontWeight: '500' },
-  descripcion: { fontSize: 13, color: COLORS.textMuted, marginBottom: 12, lineHeight: 18 },
-  pricesRow: { flexDirection: 'row', gap: 12, marginTop: 8 },
+  metaText: { fontFamily: fonts.sansRegular, fontSize: 13, color: colors.muted, flex: 1 },
+  categoriaBadge: {
+    backgroundColor: colors.paper,
+    borderRadius: 100,
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+    borderWidth: 1,
+    borderColor: colors.line,
+  },
+  categoriaText: { fontFamily: fonts.sansMedium, fontSize: 11, color: colors.ink },
+  descripcion: { fontFamily: fonts.sansRegular, fontSize: 13, color: colors.muted, marginBottom: 12, lineHeight: 18 },
+  pricesRow: { flexDirection: 'row', gap: 12, marginTop: 10 },
   priceItem: { flex: 1, alignItems: 'center' },
-  priceLabel: { fontSize: 9, color: COLORS.textMuted, letterSpacing: 0.7, marginBottom: 3 },
-  priceValue: { fontSize: 14, fontWeight: '600', color: COLORS.textPrimary },
-  stockCard: { backgroundColor: COLORS.surface, borderRadius: SIZES.radiusLg, padding: 16, borderWidth: 1, borderColor: COLORS.border, marginBottom: 16 },
-  stockTitle: { fontSize: SIZES.textXs, fontWeight: '600', color: COLORS.textMuted, letterSpacing: 0.7, marginBottom: 16, textAlign: 'center' },
-  stockControls: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 24 },
-  stockBtn: { width: 48, height: 48, borderRadius: 24, backgroundColor: COLORS.surfaceAlt, borderWidth: 1, borderColor: COLORS.border, alignItems: 'center', justifyContent: 'center' },
-  stockBtnText: { fontSize: 24, color: COLORS.textPrimary, fontWeight: '300' },
+  priceLabel: { fontFamily: fonts.sansBold, fontSize: 9, color: colors.muted, letterSpacing: 0.8, marginBottom: 4, textTransform: 'uppercase' },
+  priceValue: { fontFamily: fonts.serifSemiBold, fontSize: 18, color: colors.ink },
+
+  // ── Stock ─────────────────────────────────────────────────
+  stockCard: {
+    backgroundColor: colors.cream,
+    borderRadius: radius.card,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: colors.line,
+    marginBottom: 16,
+  },
+  stockTitle: {
+    fontFamily: fonts.sansBold,
+    fontSize: 10,
+    color: colors.muted,
+    letterSpacing: 1.2,
+    textTransform: 'uppercase',
+    marginBottom: 18,
+    textAlign: 'center',
+  },
+  stockControls: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 28 },
+  stockBtn: {
+    width: 48, height: 48, borderRadius: 24,
+    backgroundColor: colors.paper,
+    borderWidth: 1, borderColor: colors.line,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  stockBtnText: { fontFamily: fonts.serifSemiBold, fontSize: 24, color: colors.ink },
   stockDisplay: { alignItems: 'center', minWidth: 80 },
-  stockNumber: { fontSize: 40, fontWeight: '600', color: COLORS.textPrimary },
-  stockUnidad: { fontSize: 12, color: COLORS.textMuted, marginTop: 2 },
-  stockAlerta: { backgroundColor: COLORS.rose, borderRadius: SIZES.radiusSm, padding: 10, marginTop: 12, alignItems: 'center' },
-  stockAlertaText: { fontSize: 12, color: COLORS.wine, fontWeight: '500' },
-  sectionTitle: { fontSize: SIZES.textXs, fontWeight: '600', color: COLORS.textMuted, letterSpacing: 0.8, marginBottom: 10, marginTop: 4 },
-  movimientoItem: { backgroundColor: COLORS.surface, borderRadius: SIZES.radiusMd, padding: 12, borderWidth: 1, borderColor: COLORS.border, marginBottom: 8, flexDirection: 'row', alignItems: 'center', gap: 12 },
-  movimientoIcon: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
-  movimientoMotivo: { fontSize: 13, fontWeight: '500', color: COLORS.textPrimary },
-  movimientoFecha: { fontSize: 11, color: COLORS.textMuted, marginTop: 2 },
-  movimientoCantidad: { fontSize: 15, fontWeight: '600' },
-  archiveBtn: { marginTop: 24, padding: 14, borderRadius: SIZES.radiusMd, borderWidth: 1, borderColor: COLORS.border, alignItems: 'center' },
-  archiveBtnText: { fontSize: 13, color: COLORS.textMuted, fontWeight: '500' },
-  fieldLabel: { fontSize: SIZES.textXs, fontWeight: '600', color: COLORS.textMuted, letterSpacing: 0.7, marginBottom: 8, marginTop: 4 },
-  chipsRow: { flexDirection: 'row', gap: 8, flexWrap: 'wrap', marginBottom: 14 },
-  chip: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 14, paddingVertical: 7, borderRadius: SIZES.radiusFull, borderWidth: 1, borderColor: COLORS.border, backgroundColor: COLORS.surfaceAlt },
-  chipActive: { backgroundColor: COLORS.wine, borderColor: COLORS.wine },
-  chipText: { fontSize: 12, fontWeight: '500', color: COLORS.textPrimary },
-  chipTextActive: { color: COLORS.surface },
-  colorDot: { width: 10, height: 10, borderRadius: 5, borderWidth: 1, borderColor: 'rgba(0,0,0,0.1)' },
+  stockNumber: { fontFamily: fonts.serifSemiBold, fontSize: 48, color: colors.ink, lineHeight: 52 },
+  stockUnidad: { fontFamily: fonts.sansRegular, fontSize: 12, color: colors.muted, marginTop: 2 },
+  stockAlerta: {
+    backgroundColor: colors.coralBg,
+    borderRadius: 10,
+    padding: 10,
+    marginTop: 14,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: colors.coralSoft,
+  },
+  stockAlertaText: { fontFamily: fonts.sansMedium, fontSize: 12, color: colors.wine },
+
+  // ── Movimientos ───────────────────────────────────────────
+  sectionTitle: {
+    fontFamily: fonts.sansBold,
+    fontSize: 10,
+    color: colors.muted,
+    letterSpacing: 1.2,
+    textTransform: 'uppercase',
+    marginBottom: 10,
+    marginTop: 4,
+  },
+  movRow: {
+    backgroundColor: colors.paper,
+    borderRadius: 12,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: colors.line,
+    marginBottom: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  movIcon: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
+  movMotivo: { fontFamily: fonts.sansMedium, fontSize: 13, color: colors.ink },
+  movFecha:  { fontFamily: fonts.sansRegular, fontSize: 11, color: colors.muted, marginTop: 2 },
+  movCantidad: { fontFamily: fonts.serifSemiBold, fontSize: 18 },
+
+  // ── Botones peligrosos ────────────────────────────────────
+  dangerBtn: {
+  marginTop: 24,
+  padding: 16,
+  borderRadius: radius.card,
+  borderWidth: 1,
+  borderColor: colors.lineStrong, // más visible
+  backgroundColor: colors.cream,  // ← agrega esto
+  alignItems: 'center',
+},
+dangerBtnText: {
+  fontFamily: fonts.sansSemiBold,
+  fontSize: 13,
+  color: colors.wine,  // era colors.muted — más visible
+},
+
+  // ── Fields en edición ─────────────────────────────────────
+  fieldLabel: {
+    fontFamily: fonts.sansBold,
+    fontSize: 10,
+    color: colors.muted,
+    letterSpacing: 1.2,
+    textTransform: 'uppercase',
+    marginBottom: 10,
+    marginTop: 6,
+  },
+  pillsRow: { flexDirection: 'row', gap: 8, flexWrap: 'wrap', marginBottom: 14 },
+  pill: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    paddingHorizontal: 16, paddingVertical: 9,
+    borderRadius: radius.pill, borderWidth: 1,
+    borderColor: colors.line, backgroundColor: colors.paper,
+  },
+  pillActive: { backgroundColor: colors.wine, borderColor: colors.wine },
+  pillText:   { fontFamily: fonts.sansSemiBold, fontSize: 13, color: colors.ink },
+  pillTextActive: { color: colors.paper },
+  colorDot: { width: 10, height: 10, borderRadius: 5, borderWidth: 1, borderColor: 'rgba(0,0,0,0.08)' },
   tallasGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 14 },
-  tallaChip: { width: 52, height: 40, alignItems: 'center', justifyContent: 'center', borderRadius: SIZES.radiusSm, borderWidth: 1, borderColor: COLORS.border, backgroundColor: COLORS.surfaceAlt },
-  tallaChipActive: { backgroundColor: COLORS.wine, borderColor: COLORS.wine },
-  tallaText: { fontSize: 13, fontWeight: '500', color: COLORS.textPrimary },
-  tallaTextActive: { color: COLORS.surface },
-  confirmOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', alignItems: 'center', padding: 24 },
-  confirmBox: { backgroundColor: COLORS.surface, borderRadius: SIZES.radiusLg, padding: 24, maxWidth: 480, width: '100%', alignSelf: 'center' },
-  confirmTitulo: { fontSize: 16, fontWeight: '600', color: COLORS.textPrimary, marginBottom: 8 },
-  confirmMensaje: { fontSize: 13, color: COLORS.textMuted, marginBottom: 24, lineHeight: 20 },
+  tallaChip: {
+    width: 52, height: 42, alignItems: 'center', justifyContent: 'center',
+    borderRadius: radius.input, borderWidth: 1,
+    borderColor: colors.line, backgroundColor: colors.paper,
+  },
+  tallaChipActive: { backgroundColor: colors.wine, borderColor: colors.wine },
+  tallaText:       { fontFamily: fonts.sansSemiBold, fontSize: 13, color: colors.ink },
+  tallaTextActive: { color: colors.paper },
+
+  // ── Modales confirm ───────────────────────────────────────
+  confirmOverlay: {
+    flex: 1, backgroundColor: 'rgba(26,10,10,0.5)',
+    justifyContent: 'center', alignItems: 'center', padding: 24,
+  },
+  confirmBox: {
+    backgroundColor: colors.cream, borderRadius: 20, padding: 24,
+    maxWidth: 480, width: '100%', alignSelf: 'center',
+    borderWidth: 1, borderColor: colors.line,
+  },
+  confirmTitulo:  { fontFamily: fonts.serifSemiBold, fontSize: 22, color: colors.ink, marginBottom: 8 },
+  confirmMensaje: { fontFamily: fonts.sansRegular, fontSize: 13, color: colors.muted, marginBottom: 24, lineHeight: 20 },
   confirmBtns: { flexDirection: 'row', gap: 10 },
-  confirmCancelar: { flex: 1, padding: 12, borderRadius: SIZES.radiusMd, borderWidth: 1, borderColor: COLORS.border, alignItems: 'center' },
-  confirmCancelarText: { color: COLORS.textPrimary, fontWeight: '500', fontSize: 14 },
-  confirmEliminar: { flex: 1, padding: 12, borderRadius: SIZES.radiusMd, backgroundColor: COLORS.wine, alignItems: 'center' },
-  confirmEliminarText: { color: COLORS.surface, fontWeight: '600', fontSize: 14 },
+  confirmCancelar: {
+    flex: 1, padding: 14, borderRadius: radius.button,
+    borderWidth: 1, borderColor: colors.gold, alignItems: 'center',
+  },
+  confirmCancelarText: { fontFamily: fonts.sansSemiBold, color: colors.wine, fontSize: 14 },
+  confirmEliminar: {
+    flex: 1, padding: 14, borderRadius: radius.button,
+    backgroundColor: colors.wine, alignItems: 'center',
+  },
+  confirmEliminarText: { fontFamily: fonts.sansSemiBold, color: colors.paper, fontSize: 14 },
 });

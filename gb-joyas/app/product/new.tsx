@@ -1,4 +1,4 @@
-// app/product/new.tsx
+// app/product/new.tsx — Boutique theme
 import React, { useEffect, useState } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity,
@@ -11,7 +11,7 @@ import { Input } from '../../components/ui/Input';
 import { Header } from '../../components/ui/Header';
 import { getCategorias, getTallasPorCategoria, createProducto, uploadImagenProducto } from '../../lib/queries/products';
 import { Categoria, TallaPorCategoria } from '../../types';
-import { COLORS, SIZES } from '../../constants/colors';
+import { colors, fonts, radius } from '../../constants/theme';
 
 type FormData = {
   nombre: string;
@@ -22,20 +22,20 @@ type FormData = {
 };
 
 const COLORES = [
-  { key: 'dorado', label: 'Oro', dot: '#D4AF37' },
-  { key: 'plateado', label: 'Plata', dot: '#C0C0C0' },
-  { key: 'rose_gold', label: 'Oro Rosa', dot: '#ECABA0' },
+  { key: 'dorado',    label: 'Oro',      dot: '#C9A24A' },
+  { key: 'plateado',  label: 'Plata',    dot: '#C4C4CA' },
+  { key: 'rose_gold', label: 'Oro Rosa', dot: '#E0A091' },
 ];
 
 const TIPOS_ARETE = [
-  { key: 'regular', label: 'Regular' },
+  { key: 'regular',  label: 'Regular'  },
   { key: 'ear_cuff', label: 'Ear Cuff' },
 ];
 
-function RequiredLabel({ label }: { label: string }) {
+function FieldLabel({ label, required }: { label: string; required?: boolean }) {
   return (
     <Text style={styles.fieldLabel}>
-      {label.toUpperCase()} <Text style={{ color: COLORS.error }}>*</Text>
+      {label.toUpperCase()}{required && <Text style={{ color: colors.coral }}> *</Text>}
     </Text>
   );
 }
@@ -119,43 +119,41 @@ export default function NewProductScreen() {
   const catError = submitted && !catSeleccionada;
   const tallaError = submitted && !tallaSeleccionada;
 
-  // Imagen picker reutilizable
-  const ImagePickerBlock = ({ style }: { style?: any }) => (
-    <TouchableOpacity style={[styles.imagePicker, style]} onPress={pickImage} activeOpacity={0.85}>
+  // ── Zona de foto ─────────────────────────────────────────
+  const PhotoZone = ({ style }: { style?: any }) => (
+    <TouchableOpacity style={[styles.photoZone, style]} onPress={pickImage} activeOpacity={0.85}>
       {imagenUri ? (
         <>
-          <Image source={{ uri: imagenUri }} style={styles.imagePreview} />
-          <View style={styles.imageOverlay}>
-            <Text style={styles.imageOverlayText}>📷 Cambiar foto</Text>
+          <Image source={{ uri: imagenUri }} style={StyleSheet.absoluteFillObject} />
+          <View style={styles.photoOverlay}>
+            <Text style={styles.photoOverlayText}>Cambiar foto</Text>
           </View>
         </>
       ) : (
         <>
-          <View style={styles.imagePlaceholder}>
-            <Text style={styles.imagePlaceholderIcon}>📷</Text>
-            <Text style={styles.imagePlaceholderText}>Tocá para agregar foto</Text>
-          </View>
-          <View style={styles.imageOverlay}>
-            <Text style={styles.imageOverlayText}>📷 Agregar foto</Text>
+          <Text style={styles.photoGlyph}>◇</Text>
+          <Text style={styles.photoHint}>Tocá para agregar foto</Text>
+          <View style={styles.photoBtn}>
+            <Text style={styles.photoBtnText}>Agregar foto</Text>
           </View>
         </>
       )}
     </TouchableOpacity>
   );
 
-  // Campos de categoría, talla, tipo arete, color, descripción
+  // ── Campos extra (categoría, talla, tipo, color, desc) ──
   const ExtraFields = () => (
     <>
-      <RequiredLabel label="Categoría" />
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 14 }}>
-        <View style={styles.chipsRow}>
+      <FieldLabel label="Categoría" required />
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 4 }}>
+        <View style={styles.pillsRow}>
           {categorias.map(cat => (
             <TouchableOpacity
               key={cat.id}
-              style={[styles.chip, catSeleccionada === cat.id && styles.chipActive, catError && styles.chipError]}
+              style={[styles.pill, catSeleccionada === cat.id && styles.pillActive, catError && styles.pillError]}
               onPress={() => { setCatSeleccionada(cat.id); setTipoAreteSeleccionado(null); }}
             >
-              <Text style={[styles.chipText, catSeleccionada === cat.id && styles.chipTextActive]}>
+              <Text style={[styles.pillText, catSeleccionada === cat.id && styles.pillTextActive]}>
                 {cat.nombre}
               </Text>
             </TouchableOpacity>
@@ -166,12 +164,12 @@ export default function NewProductScreen() {
 
       {tallas.length > 0 && (
         <>
-          <RequiredLabel label="Talla" />
+          <FieldLabel label="Talla" required />
           <View style={styles.tallasGrid}>
             {tallas.map(t => (
               <TouchableOpacity
                 key={t.id}
-                style={[styles.tallaChip, tallaSeleccionada === t.id && styles.tallaChipActive, tallaError && styles.chipError]}
+                style={[styles.tallaChip, tallaSeleccionada === t.id && styles.tallaChipActive, tallaError && styles.pillError]}
                 onPress={() => setTallaSeleccionada(t.id)}
               >
                 <Text style={[styles.tallaText, tallaSeleccionada === t.id && styles.tallaTextActive]}>
@@ -186,15 +184,15 @@ export default function NewProductScreen() {
 
       {esAretes && (
         <>
-          <RequiredLabel label="Tipo de arete" />
-          <View style={[styles.chipsRow, { marginBottom: 14 }]}>
+          <FieldLabel label="Tipo de arete" required />
+          <View style={[styles.pillsRow, { marginBottom: 14 }]}>
             {TIPOS_ARETE.map(t => (
               <TouchableOpacity
                 key={t.key}
-                style={[styles.chip, tipoAreteSeleccionado === t.key && styles.chipActive]}
+                style={[styles.pill, tipoAreteSeleccionado === t.key && styles.pillActive]}
                 onPress={() => setTipoAreteSeleccionado(t.key as 'regular' | 'ear_cuff')}
               >
-                <Text style={[styles.chipText, tipoAreteSeleccionado === t.key && styles.chipTextActive]}>
+                <Text style={[styles.pillText, tipoAreteSeleccionado === t.key && styles.pillTextActive]}>
                   {t.label}
                 </Text>
               </TouchableOpacity>
@@ -203,16 +201,16 @@ export default function NewProductScreen() {
         </>
       )}
 
-      <RequiredLabel label="Color" />
-      <View style={[styles.chipsRow, { marginBottom: 14 }]}>
+      <FieldLabel label="Color" required />
+      <View style={[styles.pillsRow, { marginBottom: 14 }]}>
         {COLORES.map(c => (
           <TouchableOpacity
             key={c.key}
-            style={[styles.chip, colorSeleccionado === c.key && styles.chipActive]}
+            style={[styles.pill, colorSeleccionado === c.key && styles.pillActive]}
             onPress={() => setColorSeleccionado(c.key)}
           >
             <View style={[styles.colorDot, { backgroundColor: c.dot }]} />
-            <Text style={[styles.chipText, colorSeleccionado === c.key && styles.chipTextActive]}>
+            <Text style={[styles.pillText, colorSeleccionado === c.key && styles.pillTextActive]}>
               {c.label}
             </Text>
           </TouchableOpacity>
@@ -222,9 +220,14 @@ export default function NewProductScreen() {
       <Controller
         control={control} name="descripcion"
         render={({ field: { onChange, value } }) => (
-          <Input label="Descripción (opcional)" value={value} onChangeText={onChange}
+          <Input
+            label="Descripción (opcional)"
+            value={value}
+            onChangeText={onChange}
             placeholder="Material, largo, detalles especiales..."
-            multiline numberOfLines={3} style={{ height: 80, textAlignVertical: 'top' }} />
+            multiline numberOfLines={3}
+            style={{ height: 80, textAlignVertical: 'top' }}
+          />
         )}
       />
     </>
@@ -232,14 +235,12 @@ export default function NewProductScreen() {
 
   return (
     <SafeAreaView style={styles.safe}>
-      <Header showBack backLabel="‹ Cancelar" title="Nuevo Producto" />
+      <Header showBack backLabel="‹ Cancelar" title="Nuevo producto" />
 
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
-
         {isDesktop ? (
-          // DESKTOP: imagen 35% izquierda, todo lo demás derecha
           <View style={styles.desktopRow}>
-            <ImagePickerBlock style={styles.desktopImage} />
+            <PhotoZone style={styles.desktopPhoto} />
             <View style={styles.desktopFields}>
               <Controller
                 control={control} name="nombre"
@@ -249,32 +250,29 @@ export default function NewProductScreen() {
                     placeholder="Ej. Anillo solitario" error={errors.nombre?.message} />
                 )}
               />
-              <View style={styles.desktopPricesRow}>
+              <View style={styles.pricesRow}>
                 <View style={{ flex: 1 }}>
-                  <Controller
-                    control={control} name="precio_venta"
+                  <Controller control={control} name="precio_venta"
                     rules={{ required: 'Requerido', pattern: { value: /^\d+(\.\d{1,2})?$/, message: 'Solo números' } }}
                     render={({ field: { onChange, value } }) => (
                       <Input label="Precio venta (₡) *" value={value}
                         onChangeText={v => onChange(v.replace(/[^0-9.]/g, ''))}
-                        keyboardType="numeric" placeholder="18000" error={errors.precio_venta?.message} />
+                        keyboardType="numeric" placeholder="18 000" error={errors.precio_venta?.message} />
                     )}
                   />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Controller
-                    control={control} name="precio_costo"
+                  <Controller control={control} name="precio_costo"
                     rules={{ required: 'Requerido', pattern: { value: /^\d+(\.\d{1,2})?$/, message: 'Solo números' } }}
                     render={({ field: { onChange, value } }) => (
                       <Input label="Precio costo (₡) *" value={value}
                         onChangeText={v => onChange(v.replace(/[^0-9.]/g, ''))}
-                        keyboardType="numeric" placeholder="5000" error={errors.precio_costo?.message} />
+                        keyboardType="numeric" placeholder="5 000" error={errors.precio_costo?.message} />
                     )}
                   />
                 </View>
-                <View style={{ width: 120 }}>
-                  <Controller
-                    control={control} name="cantidad"
+                <View style={{ width: 110 }}>
+                  <Controller control={control} name="cantidad"
                     rules={{ required: 'Requerido', pattern: { value: /^\d+$/, message: 'Solo números' } }}
                     render={({ field: { onChange, value } }) => (
                       <Input label="Cantidad *" value={value}
@@ -288,37 +286,32 @@ export default function NewProductScreen() {
             </View>
           </View>
         ) : (
-          // MOBILE: imagen arriba grande, campos abajo
           <>
-            <ImagePickerBlock style={styles.mobileImage} />
-            <Controller
-              control={control} name="nombre"
+            <PhotoZone style={styles.mobilePhoto} />
+            <Controller control={control} name="nombre"
               rules={{ required: 'El nombre es obligatorio' }}
               render={({ field: { onChange, value } }) => (
                 <Input label="Nombre *" value={value} onChangeText={onChange}
                   placeholder="Ej. Anillo solitario" error={errors.nombre?.message} />
               )}
             />
-            <Controller
-              control={control} name="precio_venta"
+            <Controller control={control} name="precio_venta"
               rules={{ required: 'Requerido', pattern: { value: /^\d+(\.\d{1,2})?$/, message: 'Solo números' } }}
               render={({ field: { onChange, value } }) => (
                 <Input label="Precio venta (₡) *" value={value}
                   onChangeText={v => onChange(v.replace(/[^0-9.]/g, ''))}
-                  keyboardType="numeric" placeholder="18000" error={errors.precio_venta?.message} />
+                  keyboardType="numeric" placeholder="18 000" error={errors.precio_venta?.message} />
               )}
             />
-            <Controller
-              control={control} name="precio_costo"
+            <Controller control={control} name="precio_costo"
               rules={{ required: 'Requerido', pattern: { value: /^\d+(\.\d{1,2})?$/, message: 'Solo números' } }}
               render={({ field: { onChange, value } }) => (
                 <Input label="Precio costo (₡) *" value={value}
                   onChangeText={v => onChange(v.replace(/[^0-9.]/g, ''))}
-                  keyboardType="numeric" placeholder="5000" error={errors.precio_costo?.message} />
+                  keyboardType="numeric" placeholder="5 000" error={errors.precio_costo?.message} />
               )}
             />
-            <Controller
-              control={control} name="cantidad"
+            <Controller control={control} name="cantidad"
               rules={{ required: 'Requerido', pattern: { value: /^\d+$/, message: 'Solo números' } }}
               render={({ field: { onChange, value } }) => (
                 <Input label="Cantidad *" value={value}
@@ -329,7 +322,6 @@ export default function NewProductScreen() {
             <ExtraFields />
           </>
         )}
-
         <View style={{ height: 20 }} />
       </ScrollView>
 
@@ -337,10 +329,11 @@ export default function NewProductScreen() {
         <TouchableOpacity
           style={[styles.saveBtn, saving && { opacity: 0.7 }]}
           onPress={handleSubmit(onSubmit)}
-          disabled={saving} activeOpacity={0.85}
+          disabled={saving}
+          activeOpacity={0.85}
         >
           {saving
-            ? <ActivityIndicator color={COLORS.surface} />
+            ? <ActivityIndicator color={colors.paper} />
             : <Text style={styles.saveBtnText}>Guardar producto</Text>
           }
         </TouchableOpacity>
@@ -350,43 +343,176 @@ export default function NewProductScreen() {
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: COLORS.background },
-  scroll: { flex: 1 },
-  content: { padding: SIZES.lg },
+  safe:    { flex: 1, backgroundColor: colors.cream },
+  scroll:  { flex: 1 },
+  content: { padding: 20 },
 
   // Desktop
-  desktopRow: { flexDirection: 'row', gap: 24, alignItems: 'flex-start' },
-  desktopImage: { width: '35%', aspectRatio: 1, flexShrink: 0 },
+  desktopRow:    { flexDirection: 'row', gap: 28, alignItems: 'flex-start' },
+  desktopPhoto:  { width: '35%', flexShrink: 0 },
   desktopFields: { flex: 1 },
-  desktopPricesRow: { flexDirection: 'row', gap: 12 },
+  pricesRow:     { flexDirection: 'row', gap: 12 },
 
   // Mobile
-  mobileImage: { width: '100%', aspectRatio: 1.5, marginBottom: 16 },
+  mobilePhoto: { width: '100%', aspectRatio: 1.4, marginBottom: 20 },
 
-  // Imagen picker
-  imagePicker: { borderRadius: SIZES.radiusLg, overflow: 'hidden', borderWidth: 1, borderColor: COLORS.border },
-  imagePreview: { width: '100%', height: '100%' },
-  imagePlaceholder: { flex: 1, backgroundColor: COLORS.blush, alignItems: 'center', justifyContent: 'center', gap: 6 },
-  imagePlaceholderIcon: { fontSize: 32 },
-  imagePlaceholderText: { fontSize: 12, color: COLORS.textMuted, fontWeight: '500' },
-  imageOverlay: { position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: 'rgba(0,0,0,0.25)', padding: 8, alignItems: 'center' },
-  imageOverlayText: { fontSize: 12, color: 'white', fontWeight: '500' },
+  // ── Zona de foto ─────────────────────────────────────────
+  photoZone: {
+    aspectRatio: 1,
+    borderRadius: radius.card,
+    borderWidth: 1.5,
+    borderColor: colors.goldLine,
+    borderStyle: 'dashed',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 12,
+    backgroundColor: '#F7E6E0',
+    overflow: 'hidden',
+    marginBottom: 20,
+  },
+  photoGlyph: {
+    fontSize: 28,
+    color: colors.muted,
+    opacity: 0.5,
+  },
+  photoHint: {
+    fontFamily: fonts.sansMedium,
+    fontSize: 13,
+    color: colors.muted,
+  },
+  photoBtn: {
+    backgroundColor: colors.paper,
+    borderWidth: 1,
+    borderColor: colors.goldLine,
+    borderRadius: radius.pill,
+    paddingHorizontal: 18,
+    paddingVertical: 8,
+  },
+  photoBtnText: {
+    fontFamily: fonts.sansSemiBold,
+    fontSize: 12,
+    color: colors.wine,
+  },
+  photoOverlay: {
+    position: 'absolute',
+    bottom: 0, left: 0, right: 0,
+    backgroundColor: 'rgba(90,27,43,0.5)',
+    padding: 10,
+    alignItems: 'center',
+  },
+  photoOverlayText: {
+    fontFamily: fonts.sansSemiBold,
+    fontSize: 12,
+    color: colors.paper,
+  },
 
-  fieldLabel: { fontSize: SIZES.textXs, fontWeight: '600', color: COLORS.textMuted, letterSpacing: 0.7, marginBottom: 8, marginTop: 4 },
-  errorMsg: { fontSize: 11, color: COLORS.error, marginBottom: 8, marginTop: -4 },
-  chipsRow: { flexDirection: 'row', gap: 8, flexWrap: 'wrap', marginBottom: 4 },
-  chip: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 14, paddingVertical: 7, borderRadius: SIZES.radiusFull, borderWidth: 1, borderColor: COLORS.border, backgroundColor: COLORS.surfaceAlt },
-  chipActive: { backgroundColor: COLORS.wine, borderColor: COLORS.wine },
-  chipError: { borderColor: COLORS.error },
-  chipText: { fontSize: 12, fontWeight: '500', color: COLORS.textPrimary },
-  chipTextActive: { color: COLORS.surface },
-  colorDot: { width: 10, height: 10, borderRadius: 5, borderWidth: 1, borderColor: 'rgba(0,0,0,0.1)' },
-  tallasGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 4 },
-  tallaChip: { width: 52, height: 40, alignItems: 'center', justifyContent: 'center', borderRadius: SIZES.radiusSm, borderWidth: 1, borderColor: COLORS.border, backgroundColor: COLORS.surfaceAlt },
-  tallaChipActive: { backgroundColor: COLORS.wine, borderColor: COLORS.wine },
-  tallaText: { fontSize: 13, fontWeight: '500', color: COLORS.textPrimary },
-  tallaTextActive: { color: COLORS.surface },
-  footer: { padding: 12, paddingHorizontal: SIZES.lg, backgroundColor: COLORS.surface, borderTopWidth: 1, borderTopColor: COLORS.border },
-  saveBtn: { backgroundColor: COLORS.wine, borderRadius: SIZES.radiusMd, paddingVertical: 14, alignItems: 'center' },
-  saveBtnText: { color: COLORS.surface, fontSize: 15, fontWeight: '600' },
+  // ── Labels y errores ──────────────────────────────────────
+  fieldLabel: {
+    fontFamily: fonts.sansBold,
+    fontSize: 10,
+    color: colors.muted,
+    letterSpacing: 1.2,
+    textTransform: 'uppercase',
+    marginBottom: 10,
+    marginTop: 6,
+  },
+  errorMsg: {
+    fontFamily: fonts.sansRegular,
+    fontSize: 11,
+    color: colors.coral,
+    marginBottom: 8,
+    marginTop: -4,
+  },
+
+  // ── Pills ─────────────────────────────────────────────────
+  pillsRow: {
+    flexDirection: 'row',
+    gap: 8,
+    flexWrap: 'wrap',
+    marginBottom: 4,
+  },
+  pill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 16,
+    paddingVertical: 9,
+    borderRadius: radius.pill,
+    borderWidth: 1,
+    borderColor: colors.line,
+    backgroundColor: colors.paper,
+  },
+  pillActive: {
+    backgroundColor: colors.wine,
+    borderColor: colors.wine,
+  },
+  pillError: {
+    borderColor: colors.coral,
+  },
+  pillText: {
+    fontFamily: fonts.sansSemiBold,
+    fontSize: 13,
+    color: colors.ink,
+  },
+  pillTextActive: {
+    color: colors.paper,
+  },
+  colorDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.08)',
+  },
+
+  // ── Tallas ────────────────────────────────────────────────
+  tallasGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 4,
+  },
+  tallaChip: {
+    width: 52,
+    height: 42,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: radius.input,
+    borderWidth: 1,
+    borderColor: colors.line,
+    backgroundColor: colors.paper,
+  },
+  tallaChipActive: {
+    backgroundColor: colors.wine,
+    borderColor: colors.wine,
+  },
+  tallaText: {
+    fontFamily: fonts.sansSemiBold,
+    fontSize: 13,
+    color: colors.ink,
+  },
+  tallaTextActive: {
+    color: colors.paper,
+  },
+
+  // ── Footer ────────────────────────────────────────────────
+  footer: {
+    padding: 14,
+    paddingHorizontal: 20,
+    backgroundColor: colors.paper,
+    borderTopWidth: 1,
+    borderTopColor: colors.line,
+  },
+  saveBtn: {
+    backgroundColor: colors.wine,
+    borderRadius: radius.button,
+    paddingVertical: 16,
+    alignItems: 'center',
+  },
+  saveBtnText: {
+    fontFamily: fonts.sansSemiBold,
+    color: colors.paper,
+    fontSize: 15,
+    letterSpacing: 0.2,
+  },
 });

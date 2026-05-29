@@ -1,9 +1,10 @@
-// components/ui/Header.tsx
+// components/ui/Header.tsx — Boutique theme
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Image, Modal } from 'react-native';
 import { useRouter } from 'expo-router';
-import { COLORS, SIZES } from '../../constants/colors';
+import { colors, fonts, radius } from '../../constants/theme';
 
+// ─── Header principal (Dashboard) ────────────────────────────
 interface HeaderProps {
   showBack?: boolean;
   backLabel?: string;
@@ -11,32 +12,32 @@ interface HeaderProps {
   rightElement?: React.ReactNode;
 }
 
-export function Header({ showBack, backLabel = '‹ Back', title, rightElement }: HeaderProps) {
+export function Header({ showBack, backLabel = '‹ Volver', title, rightElement }: HeaderProps) {
   const router = useRouter();
 
   return (
     <View style={styles.header}>
-      {/* Left — GB monogram or back button */}
+      {/* Izquierda — monograma o botón volver */}
       {showBack ? (
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
           <Text style={styles.backText}>{backLabel}</Text>
         </TouchableOpacity>
       ) : (
-        <TouchableOpacity onPress={() => router.replace('/(tabs)')} style={styles.logoCircle}>
+        <TouchableOpacity onPress={() => router.replace('/(tabs)')} style={styles.monogram}>
           <Image source={require('../../assets/Vertical.png')} style={styles.logoImg} resizeMode="contain" />
         </TouchableOpacity>
       )}
 
-      {/* Center — Golden Bay Jewelry wordmark or custom title */}
-      <View style={styles.centerContainer}>
+      {/* Centro — wordmark o título */}
+      <View style={styles.center}>
         {title ? (
-          <Text style={styles.pageTitle}>{title}</Text>
+          <Text style={styles.centerTitle}>{title}</Text>
         ) : (
           <Image source={require('../../assets/Horizontal.png')} style={styles.wordmarkImg} resizeMode="contain" />
         )}
       </View>
 
-      {/* Right — optional element */}
+      {/* Derecha */}
       <View style={styles.right}>
         {rightElement || <View style={{ width: 40 }} />}
       </View>
@@ -44,98 +45,19 @@ export function Header({ showBack, backLabel = '‹ Back', title, rightElement }
   );
 }
 
-const styles = StyleSheet.create({
-  header: {
-    backgroundColor: COLORS.surface,
-    paddingHorizontal: SIZES.lg,
-    paddingVertical: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  // GB monogram circle
-  logoCircle: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: COLORS.blush,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  logoMono: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: COLORS.wine,
-    letterSpacing: 0.5,
-  },
-  // Back button
-  backBtn: {
-    paddingVertical: 4,
-    paddingRight: 8,
-    minWidth: 40,
-  },
-  backText: {
-    fontSize: 14,
-    color: COLORS.wine,
-    fontWeight: '500',
-  },
-  // Center
-  centerContainer: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  wordmark: {
-    alignItems: 'center',
-  },
-  wordmarkMain: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: COLORS.wine,
-    letterSpacing: 0.3,
-  },
-  wordmarkSub: {
-    fontSize: 9,
-    fontWeight: '600',
-    color: COLORS.textMuted,
-    letterSpacing: 2.5,
-    marginTop: -2,
-  },
-  pageTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: COLORS.textPrimary,
-  },
-  right: {
-    minWidth: 40,
-    alignItems: 'flex-end',
-  },
-  logoImg: {
-  width: 28,
-  height: 28,
-},
-wordmarkImg: {
-  height: 28,
-  width: 160,
-},
-});
-
+// ─── PageHeader (todas las tabs excepto index) ────────────────
 interface PageHeaderProps {
   title: string;
   rightElement?: React.ReactNode;
 }
 
 export function PageHeader({ title, rightElement }: PageHeaderProps) {
-  const router = useRouter();
   return (
     <>
       <GlobalHeader />
-      <View style={pageStyles.bar}>
+      <View style={styles.pageBar}>
         <View style={{ flex: 1 }} />
-        <Text style={pageStyles.title}>{title}</Text>
+        <Text style={styles.pageTitle}>{title}</Text>
         <View style={{ flex: 1, alignItems: 'flex-end' }}>
           {rightElement}
         </View>
@@ -144,6 +66,7 @@ export function PageHeader({ title, rightElement }: PageHeaderProps) {
   );
 }
 
+// ─── GlobalHeader (logo + wordmark + config/salir) ────────────
 function GlobalHeader() {
   const { setSession } = require('../../stores/authStore').useAuthStore();
   const router = useRouter();
@@ -159,33 +82,42 @@ function GlobalHeader() {
 
   return (
     <>
-      <View style={pageStyles.globalHeader}>
-        <TouchableOpacity onPress={() => router.replace('/(tabs)')} style={styles.logoCircle}>
+      <View style={styles.header}>
+        {/* Monograma */}
+        <TouchableOpacity onPress={() => router.replace('/(tabs)')} style={styles.monogram}>
           <Image source={require('../../assets/Vertical.png')} style={styles.logoImg} resizeMode="contain" />
         </TouchableOpacity>
-        <View style={styles.centerContainer}>
+
+        {/* Wordmark */}
+        <View style={styles.center}>
           <Image source={require('../../assets/Horizontal.png')} style={styles.wordmarkImg} resizeMode="contain" />
         </View>
-        <View style={{ flexDirection: 'row', gap: 12, alignItems: 'center' }}>
-          <TouchableOpacity onPress={() => router.push('/settings')}>
-            <Text style={{ fontSize: 13, color: COLORS.wine, fontWeight: '500' }}>Config</Text>
+
+        {/* Links */}
+        <View style={styles.headerLinks}>
+          <TouchableOpacity onPress={() => router.push('/settings')} style={styles.headerBtn}>
+            <Text style={[styles.headerLink, { color: colors.wine }]}>Config</Text>
           </TouchableOpacity>
-          <TouchableOpacity onPress={() => setShowModal(true)}>
-            <Text style={{ fontSize: 13, color: COLORS.wine, fontWeight: '500' }}>Salir</Text>
+          <TouchableOpacity onPress={() => setShowModal(true)} style={styles.headerBtn}>
+            <Text style={[styles.headerLink, { color: colors.wine }]}>Salir</Text>
           </TouchableOpacity>
         </View>
       </View>
+
+      {/* Modal cerrar sesión */}
       <Modal visible={showModal} transparent animationType="fade">
-        <View style={pageStyles.overlay}>
-          <View style={pageStyles.card}>
-            <View style={pageStyles.iconCircle}><Text style={pageStyles.iconText}>GB</Text></View>
-            <Text style={pageStyles.cardTitle}>¿Cerrar sesión?</Text>
-            <Text style={pageStyles.cardSub}>Podés volver a entrar cuando quieras.</Text>
-            <TouchableOpacity style={pageStyles.btnPrimary} onPress={handleConfirm}>
-              <Text style={pageStyles.btnPrimaryText}>Sí, salir</Text>
+        <View style={modal.overlay}>
+          <View style={modal.card}>
+            <View style={modal.monogram}>
+              <Text style={modal.monogramText}>GB</Text>
+            </View>
+            <Text style={modal.title}>¿Cerrar sesión?</Text>
+            <Text style={modal.subtitle}>Podés volver a entrar cuando quieras.</Text>
+            <TouchableOpacity style={modal.btnPrimary} onPress={handleConfirm}>
+              <Text style={modal.btnPrimaryText}>Sí, salir</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={pageStyles.btnSecondary} onPress={() => setShowModal(false)}>
-              <Text style={pageStyles.btnSecondaryText}>Cancelar</Text>
+            <TouchableOpacity style={modal.btnSecondary} onPress={() => setShowModal(false)}>
+              <Text style={modal.btnSecondaryText}>Cancelar</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -194,27 +126,187 @@ function GlobalHeader() {
   );
 }
 
-const pageStyles = StyleSheet.create({
-  globalHeader: {
-    backgroundColor: COLORS.surface, paddingHorizontal: SIZES.lg, paddingVertical: 14,
-    borderBottomWidth: 1, borderBottomColor: COLORS.border,
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+// ─────────────────────────────────────────────────────────────
+const styles = StyleSheet.create({
+  // Header compartido
+  header: {
+    backgroundColor: colors.cream,
+    paddingHorizontal: 20,
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.line,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
-  bar: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: SIZES.lg, paddingVertical: 12,
-    backgroundColor: COLORS.surface, borderBottomWidth: 1, borderBottomColor: COLORS.border,
+
+  // Monograma GB
+  monogram: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    borderWidth: 1.5,
+    borderColor: colors.gold,
+    backgroundColor: colors.sand,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
   },
-  title: { fontSize: 17, fontWeight: '600', color: COLORS.textPrimary, flex: 1, textAlign: 'center' },
-  title: { fontSize: 17, fontWeight: '600', color: COLORS.textPrimary },
-  overlay: { flex: 1, backgroundColor: 'rgba(26,10,10,0.45)', alignItems: 'center', justifyContent: 'center', padding: 32 },
-  card: { backgroundColor: '#FFF1ED', borderRadius: 20, padding: 28, width: '100%', maxWidth: 320, alignItems: 'center', borderWidth: 1, borderColor: '#E8C8B8' },
-  iconCircle: { width: 56, height: 56, borderRadius: 28, backgroundColor: '#ECABA0', alignItems: 'center', justifyContent: 'center', marginBottom: 16, borderWidth: 1, borderColor: '#E8C8B8' },
-  iconText: { fontSize: 16, fontWeight: '700', color: '#622632', letterSpacing: 0.5 },
-  cardTitle: { fontSize: 18, fontWeight: '600', color: '#1A0A0A', marginBottom: 6, textAlign: 'center' },
-  cardSub: { fontSize: 13, color: '#8F5C52', textAlign: 'center', marginBottom: 24, lineHeight: 18 },
-  btnPrimary: { width: '100%', backgroundColor: '#622632', borderRadius: 10, paddingVertical: 13, alignItems: 'center', marginBottom: 10 },
-  btnPrimaryText: { color: '#FFF1ED', fontSize: 14, fontWeight: '600' },
-  btnSecondary: { width: '100%', backgroundColor: 'transparent', borderRadius: 10, paddingVertical: 13, alignItems: 'center', borderWidth: 1, borderColor: '#E8C8B8' },
-  btnSecondaryText: { color: '#622632', fontSize: 14, fontWeight: '500' },
+  logoImg: {
+    width: 28,
+    height: 28,
+  },
+
+  // Wordmark imagen
+  center: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  wordmarkImg: {
+    height: 28,
+    width: 160,
+  },
+
+  // Título centrado (para Header con title)
+  centerTitle: {
+    fontFamily: fonts.serifSemiBold,
+    fontSize: 22,
+    color: colors.ink,
+  },
+
+  // Botón volver
+  backBtn: {
+    paddingVertical: 4,
+    paddingRight: 8,
+    minWidth: 40,
+  },
+  backText: {
+    fontFamily: fonts.sansSemiBold,
+    fontSize: 15,
+    color: colors.wine,
+  },
+
+  // Links derecha (Config / Salir)
+  headerLinks: {
+    flexDirection: 'row',
+    gap: 16,
+    alignItems: 'center',
+  },
+  headerLink: {
+    fontFamily: fonts.sansSemiBold,
+    fontSize: 12,
+    color: colors.muted,
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
+  },
+  headerBtn: {
+  paddingVertical: 5,
+  paddingHorizontal: 10,
+  borderRadius: 8,
+  borderWidth: 1,
+  borderColor: colors.line,
+},
+
+  // Derecha genérica
+  right: {
+    minWidth: 40,
+    alignItems: 'flex-end',
+  },
+
+  // PageBar (título de pantalla + acción)
+  pageBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingVertical: 14,
+    backgroundColor: colors.sand,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.line,
+  },
+  pageTitle: {
+    fontFamily: fonts.serifSemiBold,
+    fontSize: 28,
+    color: colors.wine,
+    flex: 1,
+    textAlign: 'center',
+  },
+});
+
+// ─── Modal styles ─────────────────────────────────────────────
+const modal = StyleSheet.create({
+  overlay: {
+    flex: 1,
+    backgroundColor: 'rgba(26,10,10,0.55)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 32,
+  },
+  card: {
+    backgroundColor: colors.cream,
+    borderRadius: 20,
+    padding: 28,
+    width: '100%',
+    maxWidth: 320,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: colors.line,
+  },
+  monogram: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    borderWidth: 1.5,
+    borderColor: colors.gold,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
+  },
+  monogramText: {
+    fontFamily: fonts.serifSemiBold,
+    fontSize: 18,
+    color: colors.wine,
+    letterSpacing: 0.5,
+  },
+  title: {
+    fontFamily: fonts.sansSemiBold,
+    fontSize: 18,
+    color: colors.ink,
+    marginBottom: 6,
+    textAlign: 'center',
+  },
+  subtitle: {
+    fontFamily: fonts.sansRegular,
+    fontSize: 13,
+    color: colors.muted,
+    textAlign: 'center',
+    marginBottom: 24,
+    lineHeight: 18,
+  },
+  btnPrimary: {
+    width: '100%',
+    backgroundColor: colors.wine,
+    borderRadius: radius.button,
+    paddingVertical: 14,
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  btnPrimaryText: {
+    fontFamily: fonts.sansSemiBold,
+    color: colors.paper,
+    fontSize: 14,
+  },
+  btnSecondary: {
+    width: '100%',
+    borderRadius: radius.button,
+    paddingVertical: 14,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: colors.gold,
+  },
+  btnSecondaryText: {
+    fontFamily: fonts.sansSemiBold,
+    color: colors.wine,
+    fontSize: 14,
+  },
 });

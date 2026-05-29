@@ -1,8 +1,12 @@
-// app/(tabs)/index.tsx
+// app/(tabs)/index.tsx — Boutique theme
 import React, { useCallback, useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, SafeAreaView, Modal, TextInput } from 'react-native';
+import {
+  View, Text, ScrollView, TouchableOpacity,
+  StyleSheet, SafeAreaView, Modal, TextInput,
+} from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
-import { COLORS, SIZES } from '../../constants/colors';
+import { LinearGradient } from 'expo-linear-gradient';
+import { colors, fonts, typography, shared, spacing, radius } from '../../constants/theme';
 import { Header } from '../../components/ui/Header';
 import { getProductos, getProductosStockBajo } from '../../lib/queries/products';
 import { getVentas } from '../../lib/queries/sales';
@@ -11,6 +15,7 @@ import { Venta, Producto, ResumenMes } from '../../types';
 import { supabase } from '../../lib/supabase';
 import { useAuthStore } from '../../stores/authStore';
 
+// ─── Modal cerrar sesión ──────────────────────────────────────
 function SignOutModal({ visible, onCancel, onConfirm }: {
   visible: boolean;
   onCancel: () => void;
@@ -20,8 +25,8 @@ function SignOutModal({ visible, onCancel, onConfirm }: {
     <Modal visible={visible} transparent animationType="fade">
       <View style={modal.overlay}>
         <View style={modal.card}>
-          <View style={modal.iconCircle}>
-            <Text style={modal.iconText}>GB</Text>
+          <View style={modal.monogram}>
+            <Text style={modal.monogramText}>GB</Text>
           </View>
           <Text style={modal.title}>¿Cerrar sesión?</Text>
           <Text style={modal.subtitle}>Podés volver a entrar cuando quieras.</Text>
@@ -37,6 +42,7 @@ function SignOutModal({ visible, onCancel, onConfirm }: {
   );
 }
 
+// ─── Botón salir ──────────────────────────────────────────────
 function SignOutButton() {
   const { setSession } = useAuthStore();
   const router = useRouter();
@@ -63,6 +69,7 @@ function SignOutButton() {
   );
 }
 
+// ─── Botón configuración ──────────────────────────────────────
 function SettingsButton() {
   const router = useRouter();
   return (
@@ -72,6 +79,7 @@ function SettingsButton() {
   );
 }
 
+// ─── Pantalla principal ───────────────────────────────────────
 export default function DashboardScreen() {
   const router = useRouter();
   const [ventas, setVentas] = useState<Venta[]>([]);
@@ -109,6 +117,9 @@ export default function DashboardScreen() {
   const inflado = pct > 0 && pct < 100 ? Math.round(precio / (1 - pct / 100)) : 0;
   const desinflado = pct > 0 ? Math.round(precio * (1 - pct / 100)) : 0;
 
+  const ingresos = resumen?.ingresos_ventas || 0;
+  const ganancia = resumen?.ganancia || 0;
+
   return (
     <SafeAreaView style={styles.safe}>
       <Header rightElement={
@@ -117,14 +128,16 @@ export default function DashboardScreen() {
           <SignOutButton />
         </View>
       } />
+
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
+
+        {/* Banner fin de año */}
         {hoy.getMonth() === 11 && (
           <TouchableOpacity
             style={styles.yearEndBanner}
             onPress={() => router.push('/(tabs)/finances')}
             activeOpacity={0.85}
           >
-            <Text style={styles.yearEndIcon}>📅</Text>
             <View style={{ flex: 1 }}>
               <Text style={styles.yearEndTitle}>Año {hoy.getFullYear()} terminando</Text>
               <Text style={styles.yearEndSub}>Descargá tu reporte anual antes de que se archive en enero.</Text>
@@ -133,52 +146,89 @@ export default function DashboardScreen() {
           </TouchableOpacity>
         )}
 
-        <View style={styles.metricsGrid}>
-          <View style={[styles.metricCard, styles.metricDefault]}>
+        {/* ── Hero panel vino ── */}
+        <LinearGradient
+          colors={['#6A2233', '#5A1B2B', '#3F1320']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.hero}
+        >
+          {/* marco dorado */}
+          <View style={styles.heroFrame} pointerEvents="none" />
+
+          <Text style={styles.heroEyebrow}>
+            {hoy.toLocaleDateString('es-CR', { month: 'long', year: 'numeric' }).toUpperCase()} · INGRESOS DEL MES
+          </Text>
+          <Text style={styles.heroAmount}>
+            ₡{loading ? '—' : ingresos.toLocaleString('es-CR')}
+          </Text>
+          <Text style={styles.heroSub}>
+            <Text style={{ color: colors.goldSoft, fontFamily: fonts.sansSemiBold }}>
+              {ventas.length} ventas
+            </Text>
+            {ganancia > 0 && (
+              <Text> · margen del {ingresos > 0 ? Math.round((ganancia / ingresos) * 100) : 0} % este mes</Text>
+            )}
+          </Text>
+        </LinearGradient>
+
+        {/* ── Métricas 3 tiles ── */}
+        <View style={styles.metricsRow}>
+          {/* Productos */}
+          <View style={[styles.metricCard]}>
+            <View style={styles.metricAccentBar} />
             <Text style={styles.metricLabel}>PRODUCTOS</Text>
             <Text style={styles.metricValue}>{loading ? '—' : totalProductos}</Text>
             <Text style={styles.metricSub}>en inventario</Text>
           </View>
-          <View style={[styles.metricCard, styles.metricAccent]}>
-            <Text style={[styles.metricLabel, { color: '#7A3030' }]}>VENTAS DEL MES</Text>
-            <Text style={[styles.metricValue, { color: '#3D1010' }]}>{loading ? '—' : ventas.length}</Text>
-            <Text style={[styles.metricSub, { color: '#7A3030' }]}>₡{(resumen?.ingresos_ventas || 0).toLocaleString('es-CR')}</Text>
+
+          {/* Ventas del mes */}
+          <View style={styles.metricCard}>
+            <View style={styles.metricAccentBar} />
+            <Text style={styles.metricLabel}>VENTAS DEL MES</Text>
+            <Text style={[styles.metricValue, { color: colors.wine }]}>
+              {loading ? '—' : ventas.length}
+            </Text>
+            <Text style={styles.metricSub}>
+              ₡{ingresos.toLocaleString('es-CR')}
+            </Text>
           </View>
-          <View style={[styles.metricCard, styles.metricArena]}>
-            <Text style={[styles.metricLabel, { color: '#7A4A20' }]}>GANANCIA</Text>
-            <Text style={[styles.metricValue, { color: '#3D2010' }]}>₡{Math.round((resumen?.ganancia || 0) / 1000)}k</Text>
-            <Text style={[styles.metricSub, { color: '#7A4A20' }]}>este mes</Text>
-          </View>
-          <TouchableOpacity style={[styles.metricCard, styles.metricWarn]}
-            onPress={() => router.push('/(tabs)/inventory?filter=stock_bajo')} activeOpacity={0.85}>
-            <Text style={[styles.metricLabel, { color: 'rgba(255,241,237,0.7)' }]}>STOCK BAJO</Text>
-            <Text style={[styles.metricValue, { color: 'white' }]}>{loading ? '—' : stockBajo.length}</Text>
-            <Text style={[styles.metricSub, { color: 'rgba(255,241,237,0.9)', fontWeight: '600' }]}>
-              {stockBajo.length > 0 ? 'ver productos ›' : 'todo en orden ✓'}
+
+          {/* Stock bajo */}
+          <TouchableOpacity
+            style={styles.metricCard}
+            onPress={() => router.push('/(tabs)/inventory?filter=stock_bajo')}
+            activeOpacity={0.85}
+          >
+            <View style={styles.metricAccentBar} />
+            <Text style={styles.metricLabel}>STOCK BAJO</Text>
+            <Text style={styles.metricValue}>{loading ? '—' : stockBajo.length}</Text>
+            <Text style={[styles.metricSub, stockBajo.length > 0 && { color: colors.wine, fontFamily: fonts.sansSemiBold }]}>
+              {stockBajo.length > 0 ? 'ver productos ›' : 'todo en orden'}
             </Text>
           </TouchableOpacity>
         </View>
 
-        {/* CALCULADORA DE PRECIOS */}
-        <Text style={styles.sectionTitle}>CALCULADORA DE PRECIOS</Text>
-        <View style={styles.calcCard}>
+        {/* ── Calculadora de precios ── */}
+        <View style={[styles.block, { marginTop: 1 }]}>
+          <Text style={[typography.label, { marginBottom: 12 }]}>Calculadora de precios</Text>
           <Text style={styles.calcDesc}>
-            Usá esta calculadora para saber a cuánto poner tus productos en un canal que cobra comisión, y cuánto te quedará después.
+            Sabé a cuánto poner tus productos en un canal con comisión, y cuánto te queda.
           </Text>
 
-          <View style={styles.calcInputRow}>
-            <View style={styles.calcInputBox}>
+          <View style={styles.calcRow}>
+            <View style={{ flex: 1 }}>
               <Text style={styles.calcLabel}>PRECIO BASE (₡)</Text>
               <TextInput
                 style={styles.calcInput}
                 value={calcPrecio}
                 onChangeText={v => setCalcPrecio(v.replace(/[^0-9]/g, ''))}
                 keyboardType="numeric"
-                placeholder="10000"
-                placeholderTextColor={COLORS.textLight}
+                placeholder="10 000"
+                placeholderTextColor={colors.muted2}
               />
             </View>
-            <View style={styles.calcInputBox}>
+            <View style={{ flex: 1 }}>
               <Text style={styles.calcLabel}>COMISIÓN (%)</Text>
               <TextInput
                 style={styles.calcInput}
@@ -186,7 +236,7 @@ export default function DashboardScreen() {
                 onChangeText={v => setCalcPct(v.replace(/[^0-9]/g, ''))}
                 keyboardType="numeric"
                 placeholder="30"
-                placeholderTextColor={COLORS.textLight}
+                placeholderTextColor={colors.muted2}
               />
             </View>
           </View>
@@ -195,14 +245,12 @@ export default function DashboardScreen() {
             <>
               <View style={styles.calcResultRow}>
                 <View style={styles.calcResult}>
-                  <Text style={styles.calcResultEmoji}>⬆️</Text>
                   <Text style={styles.calcResultLabel}>Precio a cobrar</Text>
                   <Text style={styles.calcResultValue}>₡{inflado.toLocaleString('es-CR')}</Text>
                   <Text style={styles.calcResultHint}>Ponelo así en el canal para recibir tu precio base completo</Text>
                 </View>
                 <View style={styles.calcDivider} />
                 <View style={styles.calcResult}>
-                  <Text style={styles.calcResultEmoji}>⬇️</Text>
                   <Text style={styles.calcResultLabel}>Lo que recibís</Text>
                   <Text style={styles.calcResultValue}>₡{desinflado.toLocaleString('es-CR')}</Text>
                   <Text style={styles.calcResultHint}>Si el canal ya tiene el precio inflado y te quita el {pct}%</Text>
@@ -210,48 +258,81 @@ export default function DashboardScreen() {
               </View>
               <View style={styles.calcExample}>
                 <Text style={styles.calcExampleText}>
-                  Ejemplo: tu arete cuesta ₡{precio.toLocaleString('es-CR')} → lo ponés a ₡{inflado.toLocaleString('es-CR')} → el canal le quita {pct}% (₡{(inflado - precio).toLocaleString('es-CR')}) → vos recibís ₡{precio.toLocaleString('es-CR')} ✓
+                  Tu producto cuesta ₡{precio.toLocaleString('es-CR')} → lo ponés a ₡{inflado.toLocaleString('es-CR')} → el canal quita {pct}% (₡{(inflado - precio).toLocaleString('es-CR')}) → vos recibís ₡{precio.toLocaleString('es-CR')}
                 </Text>
               </View>
             </>
           ) : (
-            <Text style={styles.calcHint}>Ingresá el precio base y el porcentaje de comisión para calcular</Text>
+            <Text style={styles.calcHint}>
+              Ingresá el precio base y el porcentaje de comisión para calcular
+            </Text>
           )}
         </View>
 
-        {/* VENTAS RECIENTES */}
-        <Text style={styles.sectionTitle}>VENTAS RECIENTES</Text>
-        {ultimasVentas.map(venta => (
-          <View key={venta.id} style={styles.ventaItem}>
-            <View style={styles.ventaAvatar}>
-              <Text style={styles.ventaAvatarText}>{venta.cliente_nombre.slice(0, 2).toUpperCase()}</Text>
-            </View>
-            <View style={styles.ventaInfo}>
-              <Text style={styles.ventaNombre}>{venta.cliente_nombre}</Text>
-              <Text style={styles.ventaDetalle} numberOfLines={1}>
-                {venta.metodo_entrega === 'correos_cr' ? 'Correos CR' : 'Retiro personal'}
-              </Text>
-              {venta.canal_venta?.nombre && (
-                <View style={styles.canalBadge}>
-                  <Text style={styles.canalBadgeText}>{venta.canal_venta?.nombre}</Text>
-                </View>
-              )}
-            </View>
-            <Text style={styles.ventaMonto}>₡{Number(venta.total_cobrado).toLocaleString('es-CR')}</Text>
+        {/* ── Ventas recientes ── */}
+        <View style={styles.block}>
+          <View style={styles.blockHeader}>
+            <Text style={typography.label}>Ventas recientes</Text>
+            <TouchableOpacity onPress={() => router.push('/(tabs)/sales')} activeOpacity={0.7}>
+              <Text style={styles.blockMore}>Ver todas</Text>
+            </TouchableOpacity>
           </View>
-        ))}
-        {ultimasVentas.length === 0 && !loading && (
-          <View style={styles.emptyCard}>
+
+          {ultimasVentas.length === 0 && !loading ? (
             <Text style={styles.emptyText}>Sin ventas este mes todavía</Text>
-          </View>
-        )}
+          ) : (
+            ultimasVentas.map((venta, i) => (
+              <View key={venta.id} style={[styles.saleRow, i === ultimasVentas.length - 1 && { borderBottomWidth: 0 }]}>
+                {/* Avatar */}
+                <LinearGradient
+                  colors={[colors.wine2, colors.wine]}
+                  start={{ x: 0.1, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={styles.avatar}
+                >
+                  <Text style={styles.avatarText}>
+                    {venta.cliente_nombre.slice(0, 2).toUpperCase()}
+                  </Text>
+                </LinearGradient>
+
+                {/* Info */}
+                <View style={styles.saleInfo}>
+                  <Text style={styles.saleName}>{venta.cliente_nombre}</Text>
+                  <Text style={styles.saleMeta}>
+                    {venta.metodo_entrega === 'correos_cr' ? 'Correos CR' : 'Retiro personal'}
+                  </Text>
+                  {venta.canal_venta?.nombre && (
+                    <View style={styles.chip}>
+                      <Text style={styles.chipText}>{venta.canal_venta?.nombre}</Text>
+                    </View>
+                  )}
+                </View>
+
+                {/* Monto */}
+                <Text style={styles.saleAmount}>
+                  ₡{Number(venta.total_cobrado).toLocaleString('es-CR')}
+                </Text>
+              </View>
+            ))
+          )}
+        </View>
+
       </ScrollView>
 
+      {/* ── CTAs fijos ── */}
       <View style={styles.fabRow}>
-        <TouchableOpacity style={styles.fabPrimary} onPress={() => router.push('/sale/new')} activeOpacity={0.85}>
+        <TouchableOpacity
+          style={styles.fabPrimary}
+          onPress={() => router.push('/sale/new')}
+          activeOpacity={0.85}
+        >
           <Text style={styles.fabPrimaryText}>+ Registrar venta</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.fabSecondary} onPress={() => router.push('/(tabs)/inventory')} activeOpacity={0.85}>
+        <TouchableOpacity
+          style={styles.fabSecondary}
+          onPress={() => router.push('/(tabs)/inventory')}
+          activeOpacity={0.85}
+        >
           <Text style={styles.fabSecondaryText}>Ver inventario</Text>
         </TouchableOpacity>
       </View>
@@ -259,80 +340,423 @@ export default function DashboardScreen() {
   );
 }
 
+// ─────────────────────────────────────────────────────────────
+// ESTILOS
+// ─────────────────────────────────────────────────────────────
 const modal = StyleSheet.create({
-  overlay: { flex: 1, backgroundColor: 'rgba(26,10,10,0.45)', alignItems: 'center', justifyContent: 'center', padding: 32 },
-  card: { backgroundColor: '#FFF1ED', borderRadius: 24, padding: 28, width: '100%', maxWidth: 320, alignItems: 'center', borderWidth: 1, borderColor: '#E8C8B8', shadowColor: '#622632', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.15, shadowRadius: 24 },
-  iconCircle: { width: 56, height: 56, borderRadius: 28, backgroundColor: '#ECABA0', alignItems: 'center', justifyContent: 'center', marginBottom: 16, borderWidth: 1, borderColor: '#E8C8B8' },
-  iconText: { fontSize: 16, fontWeight: '700', color: '#622632', letterSpacing: 0.5 },
-  title: { fontSize: 18, fontWeight: '700', color: '#1A0A0A', marginBottom: 6, textAlign: 'center' },
-  subtitle: { fontSize: 13, color: '#8F5C52', textAlign: 'center', marginBottom: 24, lineHeight: 18 },
-  btnPrimary: { width: '100%', backgroundColor: '#622632', borderRadius: 12, paddingVertical: 13, alignItems: 'center', marginBottom: 10, shadowColor: '#622632', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.35, shadowRadius: 12 },
-  btnPrimaryText: { color: '#FFF1ED', fontSize: 14, fontWeight: '600' },
-  btnSecondary: { width: '100%', backgroundColor: 'transparent', borderRadius: 12, paddingVertical: 13, alignItems: 'center', borderWidth: 1.5, borderColor: '#E8C8B8' },
-  btnSecondaryText: { color: '#622632', fontSize: 14, fontWeight: '500' },
+  overlay: {
+    flex: 1,
+    backgroundColor: 'rgba(26,10,10,0.55)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 32,
+  },
+  card: {
+    backgroundColor: colors.cream,
+    borderRadius: 20,
+    padding: 28,
+    width: '100%',
+    maxWidth: 320,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: colors.line,
+  },
+  monogram: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    borderWidth: 1.5,
+    borderColor: colors.gold,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
+  },
+  monogramText: {
+    fontFamily: fonts.serifSemiBold,
+    fontSize: 18,
+    color: colors.wine,
+    letterSpacing: 0.5,
+  },
+  title: {
+    fontFamily: fonts.sansSemiBold,
+    fontSize: 18,
+    color: colors.ink,
+    marginBottom: 6,
+    textAlign: 'center',
+  },
+  subtitle: {
+    fontFamily: fonts.sansRegular,
+    fontSize: 13,
+    color: colors.muted,
+    textAlign: 'center',
+    marginBottom: 24,
+    lineHeight: 18,
+  },
+  btnPrimary: {
+    width: '100%',
+    backgroundColor: colors.wine,
+    borderRadius: radius.button,
+    paddingVertical: 14,
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  btnPrimaryText: {
+    fontFamily: fonts.sansSemiBold,
+    color: colors.paper,
+    fontSize: 14,
+  },
+  btnSecondary: {
+    width: '100%',
+    borderRadius: radius.button,
+    paddingVertical: 14,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: colors.gold,
+  },
+  btnSecondaryText: {
+    fontFamily: fonts.sansSemiBold,
+    color: colors.wine,
+    fontSize: 14,
+  },
 });
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: COLORS.surface },
+  safe: { flex: 1, backgroundColor: colors.sand },
   scroll: { flex: 1 },
-  content: { padding: SIZES.lg, paddingBottom: SIZES.xxl },
+  content: { padding: 20, paddingBottom: 40, gap: 16 },
 
-  headerBtn: { paddingVertical: 5, paddingHorizontal: 10, borderRadius: 8, borderWidth: 1, borderColor: 'rgba(98,38,50,0.15)', backgroundColor: 'transparent' },
-  headerBtnText: { fontSize: 12, color: COLORS.wine, fontWeight: '500' },
+  // Header buttons
+  headerBtn: {
+    paddingVertical: 5,
+    paddingHorizontal: 10,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.line,
+  },
+  headerBtnText: {
+    fontFamily: fonts.sansMedium,
+    fontSize: 12,
+    color: colors.wine,
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
+  },
 
-  metricsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginBottom: SIZES.lg },
-  metricCard: { width: '47.5%', borderRadius: 16, padding: 16 },
-  metricDefault: { backgroundColor: '#FFF8F5', borderWidth: 1, borderColor: 'rgba(232,200,184,0.5)', shadowColor: '#622632', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 12 },
-  metricAccent: { backgroundColor: '#ECABA0', borderWidth: 1, borderColor: '#E09080', shadowColor: '#ECABA0', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.4, shadowRadius: 16 },
-  metricArena: { backgroundColor: '#EDD3B9', borderWidth: 1, borderColor: '#DFC09A', shadowColor: '#EDD3B9', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.5, shadowRadius: 16 },
-  metricWarn: { backgroundColor: '#622632', borderWidth: 1, borderColor: '#7A3540', shadowColor: '#622632', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.4, shadowRadius: 20 },
-  metricLabel: { fontSize: 9, color: '#8F5C52', letterSpacing: 0.9, marginBottom: 6, fontWeight: '600', textTransform: 'uppercase' },
-  metricValue: { fontSize: 30, fontWeight: '700', color: COLORS.textPrimary, letterSpacing: -0.5 },
-  metricSub: { fontSize: SIZES.textSm, color: COLORS.textMuted, marginTop: 4, fontWeight: '500' },
+  // ── Hero ──────────────────────────────────────────────────
+  hero: {
+    borderRadius: radius.hero,
+    padding: 28,
+    overflow: 'hidden',
+  },
+  heroFrame: {
+    position: 'absolute',
+    top: 12, left: 12, right: 12, bottom: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(226,196,154,0.28)',
+    borderRadius: 12,
+  },
+  heroEyebrow: {
+    fontFamily: fonts.sansBold,
+    fontSize: 10,
+    color: colors.goldSoft,
+    letterSpacing: 1.8,
+    textTransform: 'uppercase',
+    marginBottom: 10,
+  },
+  heroAmount: {
+    fontFamily: fonts.serifSemiBold,
+    fontSize: 52,
+    color: '#FBEFE6',
+    lineHeight: 52,
+    letterSpacing: -0.5,
+  },
+  heroSub: {
+    fontFamily: fonts.sansRegular,
+    fontSize: 13,
+    color: 'rgba(255,255,255,0.72)',
+    marginTop: 10,
+  },
 
-  sectionTitle: { fontSize: 10, fontWeight: '700', color: '#8F5C52', letterSpacing: 1, marginBottom: 10, marginTop: SIZES.lg, textTransform: 'uppercase' },
+  // ── Métricas ──────────────────────────────────────────────
+  metricsRow: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  metricCard: {
+    flex: 1,
+    backgroundColor: colors.cream,
+    borderWidth: 1,
+    borderColor: colors.line,
+    borderRadius: radius.card,
+    padding: 16,
+    overflow: 'hidden',
+  },
+  metricAccentBar: {
+    position: 'absolute',
+    top: 0, left: 16, right: 16,
+    height: 2,
+    backgroundColor: colors.gold,
+    opacity: 0.7,
+    borderRadius: 2,
+  },
+  metricLabel: {
+    fontFamily: fonts.sansBold,
+    fontSize: 9,
+    color: colors.wine,
+    letterSpacing: 1.2,
+    textTransform: 'uppercase',
+    marginBottom: 8,
+    marginTop: 6,
+  },
+  metricValue: {
+    fontFamily: fonts.serifSemiBold,
+    fontSize: 36,
+    color: colors.ink,
+    lineHeight: 36,
+  },
+  metricSub: {
+    fontFamily: fonts.sansMedium,
+    fontSize: 11,
+    color: colors.ink,
+    marginTop: 5,
+  },
 
-  // Calculadora
-  calcCard: { backgroundColor: COLORS.surface, borderRadius: 16, padding: 16, borderWidth: 1, borderColor: 'rgba(232,200,184,0.5)', marginBottom: 4 },
-  calcDesc: { fontSize: 12, color: COLORS.textMuted, lineHeight: 18, marginBottom: 14 },
-  calcInputRow: { flexDirection: 'row', gap: 12, marginBottom: 14 },
-  calcInputBox: { flex: 1 },
-  calcLabel: { fontSize: 9, fontWeight: '600', color: COLORS.textMuted, letterSpacing: 0.7, marginBottom: 6 },
-  calcInput: { borderWidth: 1, borderColor: 'rgba(232,200,184,0.6)', borderRadius: 10, padding: 10, fontSize: 17, fontWeight: '600', color: COLORS.textPrimary, backgroundColor: '#FFF8F5' },
-  calcResultRow: { flexDirection: 'row', gap: 8, marginBottom: 10 },
-  calcResult: { flex: 1, alignItems: 'center', padding: 12, backgroundColor: '#FDF5F0', borderRadius: 12, borderWidth: 1, borderColor: 'rgba(232,200,184,0.5)' },
-  calcResultEmoji: { fontSize: 18, marginBottom: 4 },
-  calcResultLabel: { fontSize: 11, color: COLORS.textMuted, fontWeight: '500', marginBottom: 6 },
-  calcResultValue: { fontSize: 17, fontWeight: '700', color: COLORS.wine, marginBottom: 4 },
-  calcResultHint: { fontSize: 10, color: COLORS.textMuted, textAlign: 'center', lineHeight: 14 },
+  // ── Bloque (card) ─────────────────────────────────────────
+  block: {
+    backgroundColor: colors.cream,
+    borderWidth: 1,
+    borderColor: colors.line,
+    borderRadius: radius.card,
+    padding: 20,
+  },
+  blockHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'baseline',
+    marginBottom: 12,
+  },
+  blockMore: {
+    fontFamily: fonts.sansBold,
+    fontSize: 11,
+    color: colors.gold,
+    letterSpacing: 1,
+    textTransform: 'uppercase',
+  },
+
+  // ── Fila de venta ─────────────────────────────────────────
+  saleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.line,
+  },
+  avatar: {
+    width: 40,
+    height: 40,
+    borderRadius: radius.avatar,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  avatarText: {
+    fontFamily: fonts.serifSemiBold,
+    fontSize: 14,
+    color: colors.paper,
+  },
+  saleInfo: { flex: 1, minWidth: 0 },
+  saleName: {
+    fontFamily: fonts.sansSemiBold,
+    fontSize: 14,
+    color: colors.ink,
+  },
+  saleMeta: {
+    fontFamily: fonts.sansRegular,
+    fontSize: 12,
+    color: colors.wine2,
+    marginTop: 2,
+  },
+  chip: {
+    alignSelf: 'flex-start',
+    marginTop: 5,
+    backgroundColor: colors.coralBg,
+    borderRadius: 100,
+    paddingHorizontal: 9,
+    paddingVertical: 3,
+  },
+  chipText: {
+    fontFamily: fonts.sansBold,
+    fontSize: 10,
+    color: colors.wine,
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
+  },
+  saleAmount: {
+    fontFamily: fonts.serifSemiBold,
+    fontSize: 20,
+    color: colors.ink,
+    letterSpacing: -0.2,
+  },
+  emptyText: {
+    fontFamily: fonts.sansRegular,
+    fontSize: 13,
+    color: colors.muted,
+    textAlign: 'center',
+    paddingVertical: 16,
+  },
+
+  // ── Calculadora ───────────────────────────────────────────
+  calcDesc: {
+    fontFamily: fonts.sansRegular,
+    fontSize: 12.5,
+    color: colors.ink,
+    lineHeight: 18,
+    marginBottom: 16,
+  },
+  calcRow: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 14,
+  },
+  calcLabel: {
+    fontFamily: fonts.sansBold,
+    fontSize: 10,
+    color: colors.wine,
+    letterSpacing: 1,
+    textTransform: 'uppercase',
+    marginBottom: 7,
+  },
+  calcInput: {
+    backgroundColor: colors.paper,
+    borderWidth: 1,
+    borderColor: colors.lineStrong,
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontFamily: fonts.serifSemiBold,
+    fontSize: 20,
+    color: colors.ink,
+  },
+  calcResultRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginBottom: 12,
+  },
   calcDivider: { width: 0 },
-  calcExample: { backgroundColor: 'rgba(232,200,184,0.2)', borderRadius: 10, padding: 10 },
-  calcExampleText: { fontSize: 11, color: COLORS.textMuted, lineHeight: 16 },
-  calcHint: { fontSize: 12, color: COLORS.textMuted, textAlign: 'center', paddingVertical: 12 },
+  calcResult: {
+    flex: 1,
+    padding: 14,
+    backgroundColor: colors.paper,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.line,
+    alignItems: 'center',
+    gap: 4,
+  },
+  calcResultLabel: {
+    fontFamily: fonts.sansMedium,
+    fontSize: 11,
+    color: colors.ink,
+  },
+  calcResultValue: {
+    fontFamily: fonts.serifSemiBold,
+    fontSize: 22,
+    color: colors.wine,
+  },
+  calcResultHint: {
+    fontFamily: fonts.sansRegular,
+    fontSize: 10,
+    color: colors.ink,
+    textAlign: 'center',
+    lineHeight: 14,
+  },
+  calcExample: {
+    backgroundColor: colors.coralBg,
+    borderRadius: 10,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: colors.coralSoft,
+  },
+  calcExampleText: {
+    fontFamily: fonts.sansRegular,
+    fontSize: 11,
+    color: colors.wine2,
+    lineHeight: 16,
+  },
+  calcHint: {
+    fontFamily: fonts.sansRegular,
+    fontSize: 12,
+    color: colors.ink,
+    textAlign: 'center',
+    paddingVertical: 12,
+  },
 
-  // Ventas recientes
-  ventaItem: { backgroundColor: 'white', borderRadius: 14, padding: 12, borderWidth: 1, borderColor: 'rgba(232,200,184,0.5)', marginBottom: 8, flexDirection: 'row', alignItems: 'center', gap: 12, shadowColor: '#622632', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 8 },
-  ventaAvatar: { width: 38, height: 38, borderRadius: 12, backgroundColor: '#ECABA0', alignItems: 'center', justifyContent: 'center' },
-  ventaAvatarText: { fontSize: 12, fontWeight: '700', color: '#622632' },
-  ventaInfo: { flex: 1 },
-  ventaNombre: { fontSize: 13, fontWeight: '600', color: COLORS.textPrimary },
-  ventaDetalle: { fontSize: 11, color: COLORS.textMuted, marginTop: 2 },
-  canalBadge: { alignSelf: 'flex-start', marginTop: 4, backgroundColor: 'rgba(98,38,50,0.08)', borderRadius: 6, paddingHorizontal: 8, paddingVertical: 2 },
-  canalBadgeText: { fontSize: 10, color: '#622632', fontWeight: '600' },
-  ventaMonto: { fontSize: 13, fontWeight: '700', color: COLORS.textPrimary },
+  // ── CTAs ──────────────────────────────────────────────────
+  fabRow: {
+    flexDirection: 'row',
+    gap: 10,
+    padding: 14,
+    paddingHorizontal: 20,
+    backgroundColor: colors.sand,
+    borderTopWidth: 1,
+    borderTopColor: colors.line,
+  },
+  fabPrimary: {
+    flex: 1,
+    backgroundColor: colors.wine,
+    borderRadius: radius.button,
+    paddingVertical: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  fabPrimaryText: {
+    fontFamily: fonts.sansSemiBold,
+    color: colors.paper,
+    fontSize: 13,
+    letterSpacing: 0.2,
+  },
+  fabSecondary: {
+    flex: 1,
+    backgroundColor: colors.cream,
+    borderRadius: radius.button,
+    paddingVertical: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: colors.gold,
+  },
+  fabSecondaryText: {
+    fontFamily: fonts.sansSemiBold,
+    color: colors.wine,
+    fontSize: 13,
+  },
 
-  emptyCard: { backgroundColor: COLORS.surface, borderRadius: 14, padding: 24, borderWidth: 1, borderColor: COLORS.border, alignItems: 'center' },
-  emptyText: { color: COLORS.textMuted, fontSize: 13 },
-
-  fabRow: { flexDirection: 'row', gap: 10, padding: 14, paddingHorizontal: SIZES.lg, backgroundColor: COLORS.surface, borderTopWidth: 1, borderTopColor: 'rgba(232,200,184,0.6)' },
-  fabPrimary: { flex: 1, backgroundColor: COLORS.wine, borderRadius: 12, paddingVertical: 13, alignItems: 'center', justifyContent: 'center', shadowColor: '#622632', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.35, shadowRadius: 12 },
-  fabPrimaryText: { color: COLORS.surface, fontSize: 13, fontWeight: '600' },
-  fabSecondary: { flex: 1, backgroundColor: COLORS.surface, borderRadius: 12, paddingVertical: 13, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: 'rgba(98,38,50,0.2)' },
-  fabSecondaryText: { color: COLORS.textPrimary, fontSize: 13, fontWeight: '600' },
-
-  yearEndBanner: { backgroundColor: '#FFF0EE', borderRadius: 14, padding: 14, borderWidth: 1.5, borderColor: '#622632', marginBottom: 12, flexDirection: 'row', alignItems: 'center', gap: 10 },
-  yearEndIcon: { fontSize: 24 },
-  yearEndTitle: { fontSize: 13, fontWeight: '600', color: '#622632', marginBottom: 2 },
-  yearEndSub: { fontSize: 11, color: '#8F5C52', lineHeight: 16 },
-  yearEndArrow: { fontSize: 20, color: '#622632', fontWeight: '600' },
+  // ── Banner fin de año ─────────────────────────────────────
+  yearEndBanner: {
+    backgroundColor: colors.cream,
+    borderRadius: 14,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: colors.wine,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  yearEndTitle: {
+    fontFamily: fonts.sansSemiBold,
+    fontSize: 13,
+    color: colors.wine,
+    marginBottom: 2,
+  },
+  yearEndSub: {
+    fontFamily: fonts.sansRegular,
+    fontSize: 11,
+    color: colors.muted,
+    lineHeight: 16,
+  },
+  yearEndArrow: {
+    fontFamily: fonts.serifSemiBold,
+    fontSize: 22,
+    color: colors.wine,
+  },
 });
