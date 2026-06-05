@@ -88,13 +88,26 @@ export async function generarPDFMensual(data: PDFData) {
 
   <div class="section-wrap">
     <div class="section-title">Resumen financiero</div>
-    <div class="cards">
-      <div class="card"><div class="card-label">Ingresos</div><div class="card-value">${fmt(data.resumen.ingresos_ventas)}</div></div>
-      <div class="card"><div class="card-label">Gastos</div><div class="card-value">${fmt(data.resumen.total_gastos)}</div></div>
-      <div class="card"><div class="card-label">Costo mercadería</div><div class="card-value">${fmt(data.resumen.cogs)}</div></div>
-    </div>
-    <div class="cards">
-      <div class="card highlight"><div class="card-label">Ganancia neta</div><div class="card-value">${fmt(data.resumen.ganancia)}</div></div>
+    <div style="background:#622632; border-radius:10px; padding:14px 20px; display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+      <div>
+        <div style="font-size:8px; font-weight:700; color:#ECABA0; letter-spacing:1px; text-transform:uppercase; margin-bottom:4px;">Ganancia neta del período</div>
+        <div style="font-size:26px; font-weight:700; color:#FFF1ED;">${fmt(data.resumen.ganancia)}</div>
+        <div style="font-size:9px; color:rgba(255,241,237,0.7); margin-top:2px;">Lo que realmente te quedó</div>
+      </div>
+      <div style="text-align:right; display:flex; gap:20px;">
+        <div>
+          <div style="font-size:8px; color:rgba(255,241,237,0.6); margin-bottom:3px;">Ingresos brutos</div>
+          <div style="font-size:13px; font-weight:600; color:#FFF1ED;">${fmt(data.resumen.ingresos_ventas)}</div>
+        </div>
+        <div>
+          <div style="font-size:8px; color:rgba(255,241,237,0.6); margin-bottom:3px;">Gastos</div>
+          <div style="font-size:13px; font-weight:600; color:#FFF1ED;">${fmt(data.resumen.total_gastos)}</div>
+        </div>
+        <div>
+          <div style="font-size:8px; color:rgba(255,241,237,0.6); margin-bottom:3px;">Costo mercadería</div>
+          <div style="font-size:13px; font-weight:600; color:#FFF1ED;">${fmt(data.resumen.cogs)}</div>
+        </div>
+      </div>
     </div>
   </div>
 
