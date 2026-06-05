@@ -355,16 +355,22 @@ export default function NewSaleScreen() {
             </View>
 
             {/* Monto recibido */}
+            <Text style={[styles.fieldLabel, { marginTop: 16, color: colors.wine, fontSize: 12 }]}>MONTO RECIBIDO (₡)</Text>
+            <Text style={styles.fechaHint}>
+              Dejá vacío si recibiste el precio normal del producto. Cambialo si recibiste un monto diferente, por ejemplo: ventas pasadas sin detalle, precio inflado por plaza (Escazú, feria), o pagos combinados.
+            </Text>
+            <Text style={[styles.fechaHint, { color: colors.chipTiktokText, fontFamily: fonts.sansBold, marginTop: -8 }]}>
+              ⚠️ Si llenás este campo, el monto que pongas reemplaza el precio original del producto en tus reportes de finanzas.
+            </Text>
             <Controller
               control={control} name="total_recibido"
               render={({ field: { onChange, value } }) => (
                 <Input
-                  label="Monto recibido (₡)"
+                  label=""
                   value={value || String(totalFinal)}
                   onChangeText={onChange}
                   keyboardType="numeric"
                   placeholder={String(totalFinal)}
-                  containerStyle={{ marginTop: 16 }}
                 />
               )}
             />
@@ -549,8 +555,8 @@ const styles = StyleSheet.create({
   },
   fechaHint: {
     fontFamily: fonts.sansRegular,
-    fontSize: 11,
-    color: colors.muted,
+    fontSize: 13,
+    color: colors.wine,
     marginBottom: 14,
   },
 

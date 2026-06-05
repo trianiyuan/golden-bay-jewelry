@@ -398,7 +398,7 @@ export default function SalesScreen() {
 
 // ─────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: colors.sand },
+  safe: { flex: 1, backgroundColor: '#F0E8DF' },
   scroll: { flex: 1 },
   content: { padding: 20, paddingBottom: 40 },
 
