@@ -2,7 +2,7 @@
 import React, { useCallback, useState } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity,
-  StyleSheet, SafeAreaView, Modal, TextInput,
+  StyleSheet, SafeAreaView, Modal, TextInput, Image,
 } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -158,7 +158,6 @@ export default function DashboardScreen() {
 
   useFocusEffect(cargar);
   const ultimasVentas = ventas.slice(0, 3);
-
   const precio = parseFloat(calcPrecio) || 0;
   const pct = parseFloat(calcPct) || 0;
   const inflado = pct > 0 && pct < 100 ? Math.round(precio / (1 - pct / 100)) : 0;
@@ -338,16 +337,24 @@ export default function DashboardScreen() {
             ultimasVentas.map((venta, i) => (
               <View key={venta.id} style={[styles.saleRow, i === ultimasVentas.length - 1 && { borderBottomWidth: 0 }]}>
                 {/* Avatar */}
-                <LinearGradient
-                  colors={[colors.wine2, colors.wine]}
-                  start={{ x: 0.1, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                  style={styles.avatar}
-                >
-                  <Text style={styles.avatarText}>
-                    {venta.cliente_nombre.slice(0, 2).toUpperCase()}
-                  </Text>
-                </LinearGradient>
+                {/* Avatar - Imagen del producto o iniciales */}
+                    {venta.productos && venta.productos.length > 0 && venta.productos[0]?.producto?.imagen_url ? (
+                      <Image
+                        source={{ uri: venta.productos[0].producto.imagen_url }}
+                        style={styles.avatar}
+                      />
+                    ) : (
+                      <LinearGradient
+                        colors={[colors.wine2, colors.wine]}
+                        start={{ x: 0.1, y: 0 }}
+                        end={{ x: 1, y: 1 }}
+                        style={styles.avatar}
+                      >
+                        <Text style={styles.avatarText}>
+                          {venta.cliente_nombre.slice(0, 2).toUpperCase()}
+                        </Text>
+                      </LinearGradient>
+                    )}
 
                 {/* Info */}
                 <View style={styles.saleInfo}>
