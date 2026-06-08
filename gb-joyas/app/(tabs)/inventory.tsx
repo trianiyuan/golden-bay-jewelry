@@ -35,7 +35,7 @@ export default function InventoryScreen() {
 
   const numColumns = width > 900 ? 4 : width > 600 ? 3 : 2;
   const cardWidth = (width - 40 - 12 * (numColumns - 1)) / numColumns;
-  const finalCardWidth = Math.min(cardWidth, 280);
+  const finalCardWidth = Math.min(cardWidth, 240);
 
   const cargar = useCallback(async () => {
     try {
@@ -401,8 +401,9 @@ filterPillTextActive: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 12,
+    justifyContent: 'center', // ← Alinea a la izquierda
   },
-
+  
   // ── Estado vacío ──────────────────────────────────────────
   empty: {
     padding: 32,
