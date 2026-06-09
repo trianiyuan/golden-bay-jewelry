@@ -154,17 +154,24 @@ export default function SalesScreen() {
                   key={venta.id}
                   style={[styles.ventaRow, i === ventas.length - 1 && { borderBottomWidth: 0 }]}
                 >
-                  {/* Avatar */}
-                  <LinearGradient
-                    colors={[colors.wine2, colors.wine]}
-                    start={{ x: 0.1, y: 0 }}
-                    end={{ x: 1, y: 1 }}
-                    style={styles.avatar}
-                  >
-                    <Text style={styles.avatarText}>
-                      {venta.cliente_nombre.slice(0, 2).toUpperCase()}
-                    </Text>
-                  </LinearGradient>
+                  {/* Avatar - Imagen del producto o iniciales */}
+                    {venta.productos && venta.productos.length > 0 && venta.productos[0]?.producto?.imagen_url ? (
+                      <Image
+                        source={{ uri: venta.productos[0].producto.imagen_url }}
+                        style={styles.avatar}
+                      />
+                    ) : (
+                      <LinearGradient
+                        colors={[colors.wine2, colors.wine]}
+                        start={{ x: 0.1, y: 0 }}
+                        end={{ x: 1, y: 1 }}
+                        style={styles.avatar}
+                      >
+                        <Text style={styles.avatarText}>
+                          {venta.cliente_nombre.slice(0, 2).toUpperCase()}
+                        </Text>
+                      </LinearGradient>
+                    )}
 
                   {/* Info */}
                   <TouchableOpacity style={styles.ventaMain} onPress={() => abrirEditar(venta)} activeOpacity={0.7}>

@@ -27,9 +27,12 @@ function SignOutModal({ visible, onCancel, onConfirm }: {
     <Modal visible={visible} transparent animationType="fade">
       <View style={modal.overlay}>
         <View style={modal.card}>
-          <View style={modal.monogram}>
-            <Text style={modal.monogramText}>GB</Text>
-          </View>
+          <Image
+            source={require('../../assets/Vertical.png')}
+            style={modal.logoImage}
+            resizeMode="contain"
+            onError={(error) => console.log('Image error:', error)}
+          />
           <Text style={modal.title}>¿Cerrar sesión?</Text>
           <Text style={modal.subtitle}>Podés volver a entrar cuando quieras.</Text>
           <TouchableOpacity style={modal.btnPrimary} onPress={onConfirm} activeOpacity={0.85}>
@@ -422,21 +425,10 @@ const modal = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.line,
   },
-  monogram: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    borderWidth: 1.5,
-    borderColor: colors.gold,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 16,
-  },
-  monogramText: {
-    fontFamily: fonts.serifSemiBold,
-    fontSize: 18,
-    color: colors.wine,
-    letterSpacing: 0.5,
+  logoImage: {
+  width: 80,
+  height: 100,
+  marginBottom: 20,
   },
   title: {
     fontFamily: fonts.sansSemiBold,
