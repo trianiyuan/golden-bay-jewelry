@@ -1,94 +1,110 @@
-# GB Joyas — App de Inventario
+# 💍 Golden Bay Jewelry App
 
-App de gestión de inventario para joyería. Construida con Expo + React Native + Supabase.
+> Sistema de gestión de inventario, ventas y finanzas desarrollado a medida para una joyería costarricense.
 
-## Stack
+**🌐 Live Demo:** [golden-bay-jewelry.vercel.app](https://golden-bay-jewelry.vercel.app)
 
-- **Expo SDK 51** + Expo Router v3 (web + iOS desde un solo código)
-- **Supabase** — base de datos, auth e imágenes
-- **Zustand** — estado global
-- **React Hook Form** — formularios
-- **TypeScript** — tipos en toda la app
-
-## Cómo arrancar
-
-### 1. Clonar e instalar dependencias
-```bash
-git clone <repo>
-cd gb-joyas
-npm install
+```
+Demo login:
+Email:    demo@goldenbayjewelry.com
+Password: Demo1234!
 ```
 
-### 2. Configurar Supabase
-1. Crear proyecto en [supabase.com](https://supabase.com)
-2. Ir a **SQL Editor** y ejecutar el archivo `supabase/migrations/001_initial_schema.sql`
-3. Copiar `.env.example` a `.env.local` y pegar tu URL y anon key
+---
+
+## 📌 Sobre el proyecto
+
+La clienta manejaba su negocio con hojas de cálculo y notas manuales. No tenía visibilidad clara de sus ganancias reales después de descontar comisiones por canal de venta ni costos fijos mensuales.
+
+Esta app resuelve eso con una solución web completa, responsiva y accesible desde cualquier dispositivo.
+
+---
+
+## ✨ Features principales
+
+- **Dashboard financiero** con KPIs en tiempo real (margen bruto, margen neto, ticket promedio)
+- **Inventario** con fotos de productos, control de stock y categorías
+- **Registro de ventas** con cálculo automático de comisiones por canal
+- **Gestión de gastos** con categorías personalizables
+- **Reportes PDF** mensuales y anuales generados con un clic
+- **Sistema de canales de venta** con comisión porcentual y costo fijo mensual
+- **Autenticación** segura con Supabase Auth
+- **Row Level Security** activo en todas las tablas
+
+---
+
+## 🛠 Stack tecnológico
+
+| Capa | Tecnología |
+|------|-----------|
+| Frontend | React Native + Expo (web) |
+| Base de datos | Supabase (PostgreSQL) |
+| Autenticación | Supabase Auth |
+| Storage | Supabase Storage |
+| Deploy | Vercel |
+| Tipado | TypeScript |
+| Estilos | NativeWind (Tailwind) + tema personalizado |
+| Fuentes | Cormorant Garamond + Hanken Grotesk |
+
+---
+
+## 🗄 Estructura de base de datos
+
+```
+canales_venta     → canales de venta con comisión y costo fijo
+categorias        → categorías de productos (anillos, aretes, etc.)
+categorias_gasto  → categorías de gastos
+productos         → inventario con fotos, tallas, colores
+tallas_por_categoria → tallas disponibles por categoría
+ventas            → registro de ventas
+ventas_productos  → productos incluidos en cada venta
+gastos            → gastos del negocio
+movimientos_inventario → entradas y salidas de stock
+```
+
+---
+
+## 🚀 Correr localmente
 
 ```bash
+git clone https://github.com/trianiyuan/golden-bay-jewelry.git
+cd golden-bay-jewelry/gb-joyas
+
+# Instalar dependencias
+npm install --legacy-peer-deps
+
+# Configurar variables de entorno
 cp .env.example .env.local
-```
+# Agrega tus credenciales de Supabase en .env.local
 
-### 3. Crear usuario en Supabase
-En el dashboard de Supabase → Authentication → Users → Add user
-
-### 4. Correr la app
-```bash
-# Web
+# Correr en web
 npm run web
-
-# iOS (necesita Mac + Xcode)
-npm run ios
 ```
 
-## Estructura de carpetas
+---
+
+## 📁 Estructura del proyecto
 
 ```
 app/
-  (tabs)/         → Pantallas principales (Dashboard, Inventario, Ventas, Gastos, Finanzas)
-  auth/           → Login
-  product/        → Detalle y formulario de producto
-  sale/           → Nueva venta
-  expense/        → Nuevo gasto
-components/
-  ui/             → Botones, cards, inputs reutilizables
-  inventory/      → Componentes del inventario
-  dashboard/      → Componentes del dashboard
-  finances/       → Gráficos financieros
-lib/
-  supabase.ts     → Cliente Supabase
-  queries/        → Todas las queries a la base de datos
-stores/           → Estado global (Zustand)
-types/            → Interfaces TypeScript
-constants/        → Colores, fuentes, tamaños
-supabase/
-  migrations/     → SQL del schema de la base de datos
+├── (auth)/        → pantalla de login
+├── (tabs)/        → navegación principal
+│   ├── index      → dashboard
+│   ├── inventory  → inventario
+│   ├── sales      → ventas
+│   ├── expenses   → gastos
+│   └── finances   → finanzas y reportes PDF
+components/        → componentes reutilizables
+constants/         → tema, colores, tipografía
+lib/               → cliente de Supabase
+stores/            → estado global con Zustand
+types/             → tipos TypeScript
 ```
 
-## Paleta de colores
+---
 
-| Variable | Hex | Uso |
-|----------|-----|-----|
-| `wine` | `#7A2340` | Botones primarios, tabs activos |
-| `blush` | `#F2C4B0` | Cards accent, avatares |
-| `peach` | `#E8A898` | Elementos secundarios |
-| `background` | `#FAF0EC` | Fondo principal |
-| `surface` | `#FDF7F5` | Cards y componentes |
-| `border` | `#E0C0B8` | Bordes de todos los componentes |
+## 👩‍💻 Desarrollado por
 
-Todos los colores están en `constants/colors.ts` — un solo cambio ahí se aplica en toda la app.
+**Triani Yuan** · [github.com/trianiyuan](https://github.com/trianiyuan)
 
-## Deploy web (Vercel)
-
-1. Subir el repo a GitHub
-2. Conectar Vercel al repo
-3. Build command: `npx expo export --platform web`
-4. Output dir: `dist`
-5. Agregar variables de entorno en Vercel
-
-## Build iOS (EAS)
-
-```bash
-npm install -g eas-cli
-eas login
-eas build --platform ios
-```
+> Proyecto real entregado a cliente. Este repo contiene una versión demo con datos ficticios.
