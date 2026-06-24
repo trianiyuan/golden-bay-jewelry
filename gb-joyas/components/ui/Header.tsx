@@ -67,7 +67,7 @@ export function PageHeader({ title, rightElement }: PageHeaderProps) {
 }
 
 // ─── GlobalHeader (logo + wordmark + config/salir) ────────────
-function GlobalHeader() {
+export function GlobalHeader() {
   const { setSession } = require('../../stores/authStore').useAuthStore();
   const router = useRouter();
   const [showModal, setShowModal] = React.useState(false);

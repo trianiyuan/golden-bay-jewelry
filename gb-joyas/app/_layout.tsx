@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { View, StyleSheet, useWindowDimensions } from 'react-native';
+import { View, StyleSheet, useWindowDimensions, Platform } from 'react-native';
 import { supabase } from '../lib/supabase';
 import { useAuthStore } from '../stores/authStore';
+
 
 // ── Fuentes Boutique ──────────────────────────────────────────
 import { useFonts } from 'expo-font';
@@ -85,6 +86,15 @@ export default function RootLayout() {
     }
   }, [session, segments, initialized]);
 
+ // Quitar scrollbar en web
+  useEffect(() => {
+    if (Platform.OS === 'web') {
+      const style = document.createElement('style');
+      style.textContent = `* { scrollbar-width: none; } *::-webkit-scrollbar { display: none; }`;
+      document.head.appendChild(style);
+    }
+  }, []);
+
   // Espera fuentes antes de renderizar
   if (!fontsLoaded) return null;
 
@@ -109,13 +119,17 @@ export default function RootLayout() {
 const styles = StyleSheet.create({
   outerContainer: {
     flex: 1,
-    backgroundColor: '#C4A882' , // --sand
+    backgroundColor: '#F5EDE6',
     alignItems: 'center',
-  },
+},
   innerContainer: {
     width: '100%',
     maxWidth: 1200,
     flex: 1,
-    backgroundColor: '#FFFCFA', // --cream
-  },
+    backgroundColor: '#FFFCFA',
+    shadowColor: 'rgba(90,27,43,0.08)',
+    shadowOffset: { width: 0, height: 0 },
+    shadowRadius: 40,
+    shadowOpacity: 1,
+},
 });

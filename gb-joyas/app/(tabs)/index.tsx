@@ -15,6 +15,7 @@ import { Venta, Producto, ResumenMes } from '../../types';
 import { supabase } from '../../lib/supabase';
 import { useAuthStore } from '../../stores/authStore';
 import { getResumenUltimosMeses } from '../../lib/queries/finances';
+import { GlobalHeader } from '../../components/ui/Header';
 
 
 // ─── Modal cerrar sesión ──────────────────────────────────────
@@ -171,7 +172,7 @@ export default function DashboardScreen() {
 
   return (
     <SafeAreaView style={styles.safe}>
-      <Header rightElement={
+      <GlobalHeader rightElement={
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
           <SettingsButton />
           <SignOutButton />
@@ -474,7 +475,7 @@ const modal = StyleSheet.create({
 });
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: colors.sand },
+  safe: { flex: 1, backgroundColor: '#F0E8DF' },
   scroll: { flex: 1 },
   content: { padding: 20, paddingBottom: 40, gap: 16 },
 
@@ -750,7 +751,7 @@ const styles = StyleSheet.create({
     gap: 10,
     padding: 14,
     paddingHorizontal: 20,
-    backgroundColor: colors.sand,
+    backgroundColor: colors.cream,
     borderTopWidth: 1,
     borderTopColor: colors.line,
   },
